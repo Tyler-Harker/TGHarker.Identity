@@ -1,0 +1,71 @@
+@page
+@model TGharker.Identity.Web.Pages.Consent.IndexModel
+@{
+    ViewData["Title"] = "Authorize Application";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow">
+            <div class="card-body p-4">
+                <div class="text-center mb-4">
+                    @if (!string.IsNullOrEmpty(Model.ClientLogoUri))
+                    {
+                        <img src="@Model.ClientLogoUri" alt="@Model.ClientName" class="mb-3" style="max-height: 64px;" />
+                    }
+                    <h4>@Model.ClientName</h4>
+                    <p class="text-muted">wants to access your account</p>
+                </div>
+
+                @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+                {
+                    <div class="alert alert-danger" role="alert">
+                        @Model.ErrorMessage
+                    </div>
+                }
+
+                <form method="post">
+                    <input type="hidden" asp-for="ClientId" />
+                    <input type="hidden" asp-for="RedirectUri" />
+                    <input type="hidden" asp-for="State" />
+                    <input type="hidden" asp-for="Nonce" />
+                    <input type="hidden" asp-for="CodeChallenge" />
+                    <input type="hidden" asp-for="CodeChallengeMethod" />
+                    <input type="hidden" asp-for="ResponseMode" />
+                    <input type="hidden" asp-for="TenantIdentifier" />
+
+                    <h6 class="mb-3">This will allow @Model.ClientName to:</h6>
+
+                    <div class="list-group mb-4">
+                        @foreach (var scope in Model.RequestedScopes)
+                        {
+                            <label class="list-group-item">
+                                <input type="checkbox" name="GrantedScopes" value="@scope.Name" checked="@scope.IsRequired" disabled="@scope.IsRequired" class="form-check-input me-2" />
+                                <strong>@scope.DisplayName</strong>
+                                @if (!string.IsNullOrEmpty(scope.Description))
+                                {
+                                    <br />
+                                    <small class="text-muted">@scope.Description</small>
+                                }
+                            </label>
+                        }
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" name="action" value="grant" class="btn btn-primary">Allow</button>
+                        <button type="submit" name="action" value="deny" class="btn btn-outline-secondary">Deny</button>
+                    </div>
+                </form>
+
+                <hr class="my-4" />
+
+                <div class="text-center">
+                    <small class="text-muted">
+                        Signed in as @User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
+                        <a asp-page="/Account/Logout">Sign out</a>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

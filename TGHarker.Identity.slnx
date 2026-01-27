@@ -1,0 +1,9 @@
+<Solution>
+  <Project Path="TGHarker.Identity.AppHost/TGHarker.Identity.AppHost.csproj" />
+  <Project Path="TGHarker.Identity.ServiceDefaults/TGHarker.Identity.ServiceDefaults.csproj" />
+  <Project Path="TGharker.Identity.Web/TGharker.Identity.Web.csproj" />
+  <Project Path="TGHarker.Identity.Abstractions/TGHarker.Identity.Abstractions.csproj" />
+  <Project Path="TGHarker.Identity.Grains/TGHarker.Identity.Grains.csproj" />
+  <Project Path="TGHarker.Identity.Silo/TGHarker.Identity.Silo.csproj" />
+  <Project Path="TGHarker.Identity.Tests/TGHarker.Identity.Tests.csproj" />
+</Solution>

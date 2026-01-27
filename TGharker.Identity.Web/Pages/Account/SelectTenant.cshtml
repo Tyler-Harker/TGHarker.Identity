@@ -1,0 +1,49 @@
+@page
+@model TGharker.Identity.Web.Pages.Account.SelectTenantModel
+@{
+    ViewData["Title"] = "Select Organization";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4">
+        <div class="card shadow">
+            <div class="card-body p-4">
+                <h2 class="card-title text-center mb-4">Select Organization</h2>
+                <p class="text-muted text-center mb-4">You have access to multiple organizations. Please select which one you'd like to sign in to.</p>
+
+                @if (Model.Tenants.Count == 0)
+                {
+                    <div class="alert alert-warning" role="alert">
+                        No organizations found.
+                    </div>
+                }
+                else
+                {
+                    <div class="list-group">
+                        @foreach (var tenant in Model.Tenants)
+                        {
+                            <a asp-page="/Account/SelectTenant"
+                               asp-page-handler="Select"
+                               asp-route-tenantId="@tenant.Id"
+                               asp-route-userId="@Model.UserId"
+                               asp-route-returnUrl="@Model.ReturnUrl"
+                               class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">@(tenant.DisplayName ?? tenant.Name)</h6>
+                                    <small class="text-muted">@tenant.Identifier</small>
+                                </div>
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        }
+                    </div>
+                }
+
+                <hr class="my-4" />
+
+                <div class="text-center">
+                    <a asp-page="/Account/Login">Back to Sign In</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,74 @@
+@page
+@model TGharker.Identity.Web.Pages.Account.RegisterModel
+@{
+    ViewData["Title"] = "Create Account";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4">
+        <div class="card shadow">
+            <div class="card-body p-4">
+                <h2 class="card-title text-center mb-4">Create Account</h2>
+
+                @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+                {
+                    <div class="alert alert-danger" role="alert">
+                        @Model.ErrorMessage
+                    </div>
+                }
+
+                <form method="post">
+                    <input type="hidden" asp-for="ReturnUrl" />
+                    <input type="hidden" asp-for="TenantIdentifier" />
+
+                    <div class="mb-3">
+                        <label asp-for="Input.Email" class="form-label">Email</label>
+                        <input asp-for="Input.Email" class="form-control" type="email" placeholder="name@example.com" required />
+                        <span asp-validation-for="Input.Email" class="text-danger"></span>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="Input.GivenName" class="form-label">First Name</label>
+                            <input asp-for="Input.GivenName" class="form-control" />
+                            <span asp-validation-for="Input.GivenName" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="Input.FamilyName" class="form-label">Last Name</label>
+                            <input asp-for="Input.FamilyName" class="form-control" />
+                            <span asp-validation-for="Input.FamilyName" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Input.Password" class="form-label">Password</label>
+                        <input asp-for="Input.Password" class="form-control" type="password" required />
+                        <span asp-validation-for="Input.Password" class="text-danger"></span>
+                        <div class="form-text">Minimum 12 characters with uppercase, lowercase, number, and special character.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Input.ConfirmPassword" class="form-label">Confirm Password</label>
+                        <input asp-for="Input.ConfirmPassword" class="form-control" type="password" required />
+                        <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Create Account</button>
+                    </div>
+                </form>
+
+                <hr class="my-4" />
+
+                <div class="text-center">
+                    <span>Already have an account?</span>
+                    <a asp-page="/Account/Login" asp-route-returnUrl="@Model.ReturnUrl" asp-route-tenant="@Model.TenantIdentifier">Sign in</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,45 @@
+# Build outputs
+**/bin/
+**/obj/
+**/out/
+
+# IDE and editor files
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Azure and deployment configs (not needed in container)
+.azure/
+.aspire/
+azure.yaml
+
+# Documentation
+*.md
+LICENSE
+
+# Test projects
+TGHarker.Identity.Tests/
+
+# AppHost (orchestration only, not deployed)
+TGHarker.Identity.AppHost/
+
+# Local development files
+*.local.json
+appsettings.Development.json
+launchSettings.json
+**/Properties/launchSettings.json
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp

@@ -1,5 +1,7 @@
+using Azure.Data.Tables;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Orleans.Configuration;
 using TGharker.Identity.Web.Endpoints;
 using TGharker.Identity.Web.Middleware;
 using TGharker.Identity.Web.Services;
@@ -10,9 +12,35 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
 
-// Orleans client - Aspire auto-configures clustering from WithReference(orleans.AsClient())
-builder.AddKeyedAzureTableServiceClient("clustering");
-builder.UseOrleansClient();
+// Check if running under Aspire (Aspire sets Orleans clustering via configuration)
+var isAspireManaged = !string.IsNullOrEmpty(builder.Configuration["Orleans:Clustering:ProviderType"]);
+
+if (isAspireManaged)
+{
+    // Orleans client - Aspire auto-configures clustering from WithReference(orleans.AsClient())
+    builder.AddKeyedAzureTableServiceClient("clustering");
+    builder.UseOrleansClient();
+}
+else
+{
+    // Production: Configure Orleans client manually
+    var storageConnectionString = builder.Configuration.GetConnectionString("AzureStorage")
+        ?? throw new InvalidOperationException("Azure Storage connection string not configured. Set 'ConnectionStrings:AzureStorage'.");
+
+    builder.UseOrleansClient(clientBuilder =>
+    {
+        clientBuilder.Configure<ClusterOptions>(options =>
+        {
+            options.ClusterId = builder.Configuration["Orleans:ClusterId"] ?? "identity-cluster";
+            options.ServiceId = builder.Configuration["Orleans:ServiceId"] ?? "identity-service";
+        });
+
+        clientBuilder.UseAzureStorageClustering(options =>
+        {
+            options.TableServiceClient = new TableServiceClient(storageConnectionString);
+        });
+    });
+}
 
 // Add Orleans Search with PostgreSQL for querying grains
 builder.AddNpgsqlDbContext<PostgreSqlSearchContext>("searchdb-identity");

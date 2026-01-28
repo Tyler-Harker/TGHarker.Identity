@@ -1,5 +1,6 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
+builder.AddAzureContainerAppEnvironment("env");
 // Azure Storage for Orleans persistence (using emulator in development)
 var storage = builder.AddAzureStorage("storage")
     .RunAsEmulator();

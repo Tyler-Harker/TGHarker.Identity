@@ -160,3 +160,4 @@ BenchmarkDotNet.Artifacts/
 
 # MiniProfiler
 App_Data/*.json
+.azure

@@ -1,5 +1,5 @@
 # Build stage
-FROM mcr.microsoft.com/dotnet/sdk:10.0-preview AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 # Copy solution and project files for restore
@@ -21,11 +21,8 @@ WORKDIR /src/TGharker.Identity.Web
 RUN dotnet publish -c Release -o /app/publish --no-restore
 
 # Runtime stage
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-preview AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
-
-# Create non-root user for security
-RUN adduser --disabled-password --gecos '' appuser
 
 # Copy published app
 COPY --from=build /app/publish .
@@ -34,8 +31,8 @@ COPY --from=build /app/publish .
 ENV ASPNETCORE_URLS=http://+:8080
 ENV DOTNET_RUNNING_IN_CONTAINER=true
 
-# Switch to non-root user
-USER appuser
+# Switch to built-in non-root user
+USER app
 
 EXPOSE 8080
 

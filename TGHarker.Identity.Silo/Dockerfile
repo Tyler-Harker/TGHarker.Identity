@@ -1,5 +1,5 @@
 # Build stage
-FROM mcr.microsoft.com/dotnet/sdk:10.0-preview AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 # Copy solution and project files for restore
@@ -23,11 +23,8 @@ WORKDIR /src/TGHarker.Identity.Silo
 RUN dotnet publish -c Release -o /app/publish --no-restore
 
 # Runtime stage
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-preview AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
-
-# Create non-root user for security
-RUN adduser --disabled-password --gecos '' appuser
 
 # Copy published app
 COPY --from=build /app/publish .
@@ -41,8 +38,8 @@ ENV DOTNET_RUNNING_IN_CONTAINER=true
 ENV ORLEANS__SILOPORT=11111
 ENV ORLEANS__GATEWAYPORT=30000
 
-# Switch to non-root user
-USER appuser
+# Switch to built-in non-root user
+USER app
 
 EXPOSE 8080 11111 30000
 

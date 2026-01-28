@@ -15,7 +15,7 @@ builder.AddKeyedAzureTableServiceClient("clustering");
 builder.UseOrleansClient();
 
 // Add Orleans Search with PostgreSQL for querying grains
-builder.AddNpgsqlDbContext<PostgreSqlSearchContext>("searchdb");
+builder.AddNpgsqlDbContext<PostgreSqlSearchContext>("searchdb-identity");
 builder.Services.AddOrleansSearch();
 
 // Add services to the container

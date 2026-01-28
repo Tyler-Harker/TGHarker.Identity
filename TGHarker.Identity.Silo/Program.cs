@@ -24,7 +24,7 @@ var isAspireManaged = !string.IsNullOrEmpty(builder.Configuration["Orleans:Clust
 var isLocalDevelopment = builder.Environment.IsDevelopment() ||
     string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CONTAINER_APP_NAME"));
 
-var connectionString = builder.Configuration.GetConnectionString("searchdb")
+var connectionString = builder.Configuration.GetConnectionString("searchdb-identity")
     ?? "Host=localhost;Database=searchdb;Username=postgres;Password=postgres";
 
 // Orleans silo configuration - Aspire auto-configures clustering and grain storage
@@ -77,7 +77,7 @@ builder.UseOrleans(siloBuilder =>
     }
 });
 // Aspire registers the PostgreSqlSearchContext via AddNpgsqlDbContext
-builder.AddNpgsqlDbContext<PostgreSqlSearchContext>("searchdb");
+builder.AddNpgsqlDbContext<PostgreSqlSearchContext>("searchdb-identity");
 builder.Services.AddOrleansSearch().UsePostgreSql(connectionString);
 
 var app = builder.Build();

@@ -44,43 +44,48 @@
                         }
                     </div>
 
+                    @if (Model.TotalPages > 1)
+                    {
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <small class="text-muted">Showing @Model.Tenants.Count of @Model.TotalCount tenants</small>
+                            <nav>
+                                <ul class="pagination pagination-sm mb-0">
+                                    <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
+                                        <a class="page-link" asp-page="./Index" asp-route-pageNumber="@(Model.PageNumber - 1)" asp-route-returnUrl="@Model.ReturnUrl">Previous</a>
+                                    </li>
+                                    @for (var i = 1; i <= Model.TotalPages; i++)
+                                    {
+                                        <li class="page-item @(i == Model.PageNumber ? "active" : "")">
+                                            <a class="page-link" asp-page="./Index" asp-route-pageNumber="@i" asp-route-returnUrl="@Model.ReturnUrl">@i</a>
+                                        </li>
+                                    }
+                                    <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
+                                        <a class="page-link" asp-page="./Index" asp-route-pageNumber="@(Model.PageNumber + 1)" asp-route-returnUrl="@Model.ReturnUrl">Next</a>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
+                    }
+
                     <hr class="my-4" />
-                    <p class="text-center text-muted mb-3">Or create a new tenant</p>
+                    <div class="d-grid">
+                        <a asp-page="./Create" class="btn btn-success">
+                            <i class="bi bi-plus-lg me-1"></i> Create New Tenant
+                        </a>
+                    </div>
                 }
                 else
                 {
                     <div class="alert alert-info" role="alert">
                         <h5 class="alert-heading">Welcome!</h5>
-                        <p class="mb-0">You're not a member of any tenant yet. Create one below to get started.</p>
+                        <p class="mb-0">You're not a member of any tenant yet. Create one to get started.</p>
+                    </div>
+                    <div class="d-grid">
+                        <a asp-page="./Create" class="btn btn-success btn-lg">
+                            <i class="bi bi-plus-lg me-1"></i> Create Your First Tenant
+                        </a>
                     </div>
                 }
-
-                <form method="post" asp-page-handler="Create">
-                    <input type="hidden" asp-for="ReturnUrl" />
-
-                    <div class="mb-3">
-                        <label asp-for="CreateInput.Name" class="form-label">Tenant Name</label>
-                        <input asp-for="CreateInput.Name" class="form-control" placeholder="Acme Corporation" />
-                        <span asp-validation-for="CreateInput.Name" class="text-danger"></span>
-                    </div>
-
-                    <div class="mb-3">
-                        <label asp-for="CreateInput.Identifier" class="form-label">Identifier</label>
-                        <input asp-for="CreateInput.Identifier" class="form-control" placeholder="acme-corp" />
-                        <div class="form-text">URL-safe identifier (lowercase letters, numbers, and hyphens only)</div>
-                        <span asp-validation-for="CreateInput.Identifier" class="text-danger"></span>
-                    </div>
-
-                    <div class="mb-3">
-                        <label asp-for="CreateInput.DisplayName" class="form-label">Display Name <span class="text-muted">(optional)</span></label>
-                        <input asp-for="CreateInput.DisplayName" class="form-control" placeholder="Acme Corp" />
-                        <span asp-validation-for="CreateInput.DisplayName" class="text-danger"></span>
-                    </div>
-
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-success">Create Tenant</button>
-                    </div>
-                </form>
 
                 <hr class="my-4" />
 
@@ -92,27 +97,3 @@
     </div>
 </div>
 
-@section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-
-    <script>
-        // Auto-generate identifier from name
-        document.getElementById('CreateInput_Name').addEventListener('input', function() {
-            var identifierField = document.getElementById('CreateInput_Identifier');
-            if (!identifierField.dataset.userModified) {
-                var identifier = this.value
-                    .toLowerCase()
-                    .replace(/[^a-z0-9\s-]/g, '')
-                    .replace(/\s+/g, '-')
-                    .replace(/-+/g, '-')
-                    .replace(/^-|-$/g, '');
-                identifierField.value = identifier;
-            }
-        });
-
-        // Mark identifier as user-modified once user types in it
-        document.getElementById('CreateInput_Identifier').addEventListener('input', function() {
-            this.dataset.userModified = 'true';
-        });
-    </script>
-}

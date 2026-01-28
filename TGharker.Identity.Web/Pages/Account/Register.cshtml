@@ -10,6 +10,30 @@
             <div class="card-body p-4">
                 <h2 class="card-title text-center mb-4">Create Account</h2>
 
+                @if (Model.Invitation != null && Model.InvitationTenant != null)
+                {
+                    <div class="alert alert-info" role="alert">
+                        <i class="bi bi-envelope-open me-2"></i>
+                        You've been invited to join <strong>@Model.InvitationTenant.Name</strong>
+                        @if (Model.Invitation.Roles.Count > 0)
+                        {
+                            <span> as <strong>@string.Join(", ", Model.Invitation.Roles)</strong></span>
+                        }
+                    </div>
+                }
+
+                @if (Model.OrgInvitation != null && Model.InvitationOrganization != null)
+                {
+                    <div class="alert alert-info" role="alert">
+                        <i class="bi bi-building me-2"></i>
+                        You've been invited to join <strong>@(Model.InvitationOrganization.DisplayName ?? Model.InvitationOrganization.Name)</strong>
+                        @if (Model.OrgInvitationTenant != null)
+                        {
+                            <span> in <strong>@(Model.OrgInvitationTenant.DisplayName ?? Model.OrgInvitationTenant.Name)</strong></span>
+                        }
+                    </div>
+                }
+
                 @if (!string.IsNullOrEmpty(Model.ErrorMessage))
                 {
                     <div class="alert alert-danger" role="alert">
@@ -20,10 +44,19 @@
                 <form method="post">
                     <input type="hidden" asp-for="ReturnUrl" />
                     <input type="hidden" asp-for="TenantIdentifier" />
+                    <input type="hidden" asp-for="InviteToken" />
+                    <input type="hidden" asp-for="OrgInviteToken" />
 
                     <div class="mb-3">
                         <label asp-for="Input.Email" class="form-label">Email</label>
-                        <input asp-for="Input.Email" class="form-control" type="email" placeholder="name@example.com" required />
+                        @if (Model.Invitation != null || Model.OrgInvitation != null)
+                        {
+                            <input asp-for="Input.Email" class="form-control" type="email" readonly />
+                        }
+                        else
+                        {
+                            <input asp-for="Input.Email" class="form-control" type="email" placeholder="name@example.com" required />
+                        }
                         <span asp-validation-for="Input.Email" class="text-danger"></span>
                     </div>
 
@@ -62,7 +95,18 @@
 
                 <div class="text-center">
                     <span>Already have an account?</span>
-                    <a asp-page="/Account/Login" asp-route-returnUrl="@Model.ReturnUrl" asp-route-tenant="@Model.TenantIdentifier">Sign in</a>
+                    @if (!string.IsNullOrEmpty(Model.InviteToken))
+                    {
+                        <a asp-page="/Account/Login" asp-route-returnUrl="@($"/Account/AcceptInvite?token={Uri.EscapeDataString(Model.InviteToken)}")">Sign in</a>
+                    }
+                    else if (!string.IsNullOrEmpty(Model.OrgInviteToken))
+                    {
+                        <a asp-page="/Account/Login" asp-route-returnUrl="@($"/Account/AcceptOrgInvite?token={Uri.EscapeDataString(Model.OrgInviteToken)}")">Sign in</a>
+                    }
+                    else
+                    {
+                        <a asp-page="/Account/Login" asp-route-returnUrl="@Model.ReturnUrl" asp-route-tenant="@Model.TenantIdentifier">Sign in</a>
+                    }
                 </div>
             </div>
         </div>

@@ -260,6 +260,47 @@ public sealed class UserGrain : Grain, IUserGrain
         }
     }
 
+    public Task<IReadOnlyList<OrganizationMembershipRef>> GetOrganizationMembershipsAsync()
+    {
+        return Task.FromResult<IReadOnlyList<OrganizationMembershipRef>>(_state.State.OrganizationMemberships);
+    }
+
+    public Task<IReadOnlyList<OrganizationMembershipRef>> GetOrganizationMembershipsInTenantAsync(string tenantId)
+    {
+        var memberships = _state.State.OrganizationMemberships
+            .Where(m => m.TenantId == tenantId)
+            .ToList();
+        return Task.FromResult<IReadOnlyList<OrganizationMembershipRef>>(memberships);
+    }
+
+    public async Task AddOrganizationMembershipAsync(string tenantId, string organizationId)
+    {
+        var exists = _state.State.OrganizationMemberships
+            .Any(m => m.TenantId == tenantId && m.OrganizationId == organizationId);
+
+        if (!exists)
+        {
+            _state.State.OrganizationMemberships.Add(new OrganizationMembershipRef
+            {
+                TenantId = tenantId,
+                OrganizationId = organizationId
+            });
+            await _state.WriteStateAsync();
+        }
+    }
+
+    public async Task RemoveOrganizationMembershipAsync(string tenantId, string organizationId)
+    {
+        var membership = _state.State.OrganizationMemberships
+            .FirstOrDefault(m => m.TenantId == tenantId && m.OrganizationId == organizationId);
+
+        if (membership != null)
+        {
+            _state.State.OrganizationMemberships.Remove(membership);
+            await _state.WriteStateAsync();
+        }
+    }
+
     private static string GenerateSecureToken()
     {
         var bytes = RandomNumberGenerator.GetBytes(32);

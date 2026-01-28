@@ -1,0 +1,70 @@
+@page
+@model TGharker.Identity.Web.Pages.Account.AcceptInviteModel
+@{
+    ViewData["Title"] = "Accept Invitation";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4">
+        <div class="card shadow">
+            <div class="card-body p-4">
+                @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+                {
+                    <div class="text-center mb-4">
+                        <i class="bi bi-exclamation-circle text-danger" style="font-size: 3rem;"></i>
+                    </div>
+                    <h2 class="card-title text-center mb-3">Invitation Error</h2>
+                    <div class="alert alert-danger" role="alert">
+                        @Model.ErrorMessage
+                    </div>
+                    <div class="text-center">
+                        <a asp-page="/Index" class="btn btn-primary">Go to Home</a>
+                    </div>
+                }
+                else if (Model.Invitation != null && Model.Tenant != null)
+                {
+                    <div class="text-center mb-4">
+                        <i class="bi bi-envelope-open text-primary" style="font-size: 3rem;"></i>
+                    </div>
+                    <h2 class="card-title text-center mb-3">You're Invited!</h2>
+
+                    <div class="alert alert-info" role="alert">
+                        <strong>@Model.Tenant.Name</strong> has invited you to join their organization.
+                    </div>
+
+                    <div class="mb-4">
+                        <p class="text-muted mb-2">Invitation details:</p>
+                        <ul class="list-unstyled">
+                            <li><i class="bi bi-envelope me-2"></i>@Model.Invitation.Email</li>
+                            <li><i class="bi bi-person-badge me-2"></i>Role: @string.Join(", ", Model.Invitation.Roles)</li>
+                            <li><i class="bi bi-clock me-2"></i>Expires: @Model.Invitation.ExpiresAt.ToString("MMM d, yyyy")</li>
+                        </ul>
+                    </div>
+
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <form method="post" asp-page-handler="Accept">
+                            <input type="hidden" asp-for="Token" />
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="bi bi-check-circle me-2"></i>Accept Invitation
+                                </button>
+                            </div>
+                        </form>
+                    }
+                    else
+                    {
+                        <div class="d-grid gap-2">
+                            <a asp-page="/Account/Register" asp-route-invite="@Model.Token" class="btn btn-primary btn-lg">
+                                <i class="bi bi-person-plus me-2"></i>Create Account
+                            </a>
+                            <a asp-page="/Account/Login" asp-route-returnUrl="@($"/Account/AcceptInvite?token={Uri.EscapeDataString(Model.Token ?? "")}")" class="btn btn-outline-secondary">
+                                <i class="bi bi-box-arrow-in-right me-2"></i>Sign in with existing account
+                            </a>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+</div>

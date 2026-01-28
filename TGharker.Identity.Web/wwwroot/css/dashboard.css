@@ -40,12 +40,14 @@
 .tenant-switcher .dropdown-toggle {
     background-color: #fff;
     border-color: #dee2e6;
+    color: #333;
 }
 
 .tenant-switcher .dropdown-toggle:hover,
 .tenant-switcher .dropdown-toggle:focus {
     background-color: #f8f9fa;
     border-color: #adb5bd;
+    color: #333;
 }
 
 .tenant-switcher .dropdown-menu {

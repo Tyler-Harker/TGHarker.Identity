@@ -29,6 +29,7 @@ public sealed class TenantState
     [Id(8)] public string? CreatedByUserId { get; set; }
     [Id(9)] public List<string> ClientIds { get; set; } = [];
     [Id(10)] public List<TenantRole> Roles { get; set; } = [];
+    [Id(11)] public List<string> OrganizationIds { get; set; } = [];
 }
 
 [GenerateSerializer]

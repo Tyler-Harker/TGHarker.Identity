@@ -31,4 +31,9 @@ public interface ITenantGrain : IGrainWithStringKey
     Task<TenantRole> CreateRoleAsync(string name, string? description, List<string> permissions);
     Task<TenantRole?> UpdateRoleAsync(string roleId, string name, string? description, List<string> permissions);
     Task<bool> DeleteRoleAsync(string roleId);
+
+    // Organization management
+    Task<IReadOnlyList<string>> GetOrganizationIdsAsync();
+    Task AddOrganizationAsync(string organizationId);
+    Task RemoveOrganizationAsync(string organizationId);
 }

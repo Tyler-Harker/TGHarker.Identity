@@ -1,0 +1,224 @@
+@page "{id}"
+@using TGHarker.Identity.Abstractions.Models
+@model TGharker.Identity.Web.Pages.Dashboard.Organizations.DetailsModel
+@{
+    ViewData["Title"] = Model.Organization?.DisplayName ?? Model.Organization?.Name ?? "Organization Details";
+}
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-page="./Index">Organizations</a></li>
+        <li class="breadcrumb-item active">@(Model.Organization?.Name ?? "Details")</li>
+    </ol>
+</nav>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Organization Info Card -->
+        <div class="card dashboard-card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Organization Details</h5>
+                <a asp-page="./Edit" asp-route-id="@Model.Organization?.Id" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-pencil me-1"></i> Edit
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted small">Name</label>
+                        <div class="fw-semibold">@Model.Organization?.Name</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted small">Identifier</label>
+                        <div><code>@Model.Organization?.Identifier</code></div>
+                    </div>
+                </div>
+                @if (!string.IsNullOrEmpty(Model.Organization?.DisplayName))
+                {
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Display Name</label>
+                        <div>@Model.Organization.DisplayName</div>
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(Model.Organization?.Description))
+                {
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Description</label>
+                        <div>@Model.Organization.Description</div>
+                    </div>
+                }
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted small">Created</label>
+                        <div>@Model.Organization?.CreatedAt.ToString("MMM d, yyyy 'at' h:mm tt")</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted small">Status</label>
+                        <div>
+                            @if (Model.Organization?.IsActive == true)
+                            {
+                                <span class="badge bg-success">Active</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">Inactive</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Members Card -->
+        <div class="card dashboard-card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Members (@Model.Members.Count)</h5>
+                <a asp-page="./Members/Invite" asp-route-orgId="@Model.Organization?.Id" class="btn btn-sm btn-primary">
+                    <i class="bi bi-person-plus me-1"></i> Invite Member
+                </a>
+            </div>
+            <div class="card-body p-0">
+                @if (Model.Members.Count == 0)
+                {
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-people d-block fs-1 mb-2"></i>
+                        <p class="mb-0">No members yet</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-dashboard table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Member</th>
+                                    <th>Roles</th>
+                                    <th>Joined</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var member in Model.Members)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="user-avatar me-3">
+                                                    <i class="bi bi-person-circle fs-4 text-muted"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="fw-semibold">
+                                                        @(member.Name ?? member.Email)
+                                                        @if (member.IsCurrentUser)
+                                                        {
+                                                            <span class="badge bg-secondary ms-1">You</span>
+                                                        }
+                                                    </div>
+                                                    @if (!string.IsNullOrEmpty(member.Name))
+                                                    {
+                                                        <small class="text-muted">@member.Email</small>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            @foreach (var role in member.Roles.Take(3))
+                                            {
+                                                var badgeClass = role == WellKnownOrganizationRoles.Owner ? "bg-warning text-dark" :
+                                                                 role == WellKnownOrganizationRoles.Admin ? "bg-primary" : "bg-secondary";
+                                                var roleName = Model.Roles.FirstOrDefault(r => r.Id == role)?.Name ?? role;
+                                                <span class="badge @badgeClass me-1">@roleName</span>
+                                            }
+                                            @if (member.Roles.Count > 3)
+                                            {
+                                                <span class="badge bg-light text-dark">+@(member.Roles.Count - 3)</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">@member.JoinedAt.ToString("MMM d, yyyy")</small>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Settings Card -->
+        <div class="card dashboard-card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="bi bi-gear me-2"></i>Settings</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="small">Self-registration</span>
+                    @if (Model.Organization?.Settings.AllowSelfRegistration == true)
+                    {
+                        <span class="badge bg-success">Enabled</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary">Disabled</span>
+                    }
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="small">Email verification</span>
+                    @if (Model.Organization?.Settings.RequireEmailVerification == true)
+                    {
+                        <span class="badge bg-success">Required</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary">Optional</span>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Roles Card -->
+        <div class="card dashboard-card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="bi bi-shield-check me-2"></i>Roles (@Model.Roles.Count)</h5>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    @foreach (var role in Model.Roles)
+                    {
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="fw-semibold">@role.Name</div>
+                                @if (!string.IsNullOrEmpty(role.Description))
+                                {
+                                    <small class="text-muted">@role.Description</small>
+                                }
+                            </div>
+                            @if (role.IsSystem)
+                            {
+                                <span class="badge bg-secondary">System</span>
+                            }
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>

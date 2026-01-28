@@ -1,6 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using TGHarker.Identity.Abstractions.Grains;
+using TGHarker.Identity.Abstractions.Models.Generated;
+using TGHarker.Orleans.Search.Core.Extensions;
+using TGHarker.Orleans.Search.Generated;
 
 namespace TGharker.Identity.Web.Pages.Dashboard.Clients;
 
@@ -15,6 +19,15 @@ public class IndexModel : PageModel
     }
 
     public List<ClientViewModel> Clients { get; set; } = [];
+
+    [BindProperty(SupportsGet = true)]
+    public int PageNumber { get; set; } = 1;
+
+    public int PageSize { get; set; } = 10;
+    public int TotalCount { get; set; }
+    public int TotalPages => (int)Math.Ceiling(TotalCount / (double)PageSize);
+    public bool HasPreviousPage => PageNumber > 1;
+    public bool HasNextPage => PageNumber < TotalPages;
 
     public class ClientViewModel
     {
@@ -36,15 +49,22 @@ public class IndexModel : PageModel
         ViewData["ActivePage"] = "Clients";
 
         var tenantId = GetTenantId();
-        var tenantGrain = _clusterClient.GetGrain<ITenantGrain>(tenantId);
-        var clientIds = await tenantGrain.GetClientIdsAsync();
 
-        foreach (var clientId in clientIds)
+        TotalCount = await _clusterClient.Search<IClientGrain>()
+            .Where(c => c.TenantId == tenantId && c.IsActive)
+            .CountAsync();
+
+        var clientGrains = await _clusterClient.Search<IClientGrain>()
+            .Where(c => c.TenantId == tenantId && c.IsActive)
+            .Skip((PageNumber - 1) * PageSize)
+            .Take(PageSize)
+            .ToListAsync();
+
+        foreach (var clientGrain in clientGrains)
         {
-            var clientGrain = _clusterClient.GetGrain<IClientGrain>($"{tenantId}/{clientId}");
             var client = await clientGrain.GetStateAsync();
 
-            if (client != null && client.IsActive)
+            if (client != null)
             {
                 Clients.Add(new ClientViewModel
                 {

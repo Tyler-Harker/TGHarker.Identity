@@ -1,0 +1,122 @@
+@page
+@model TGharker.Identity.Web.Pages.Dashboard.Organizations.CreateModel
+@{
+    ViewData["Title"] = "Create Organization";
+}
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-page="./Index">Organizations</a></li>
+        <li class="breadcrumb-item active">Create</li>
+    </ol>
+</nav>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @Model.ErrorMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card dashboard-card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Create New Organization</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label asp-for="Input.Name" class="form-label">Organization Name <span class="text-danger">*</span></label>
+                            <input asp-for="Input.Name" class="form-control" placeholder="Engineering Team" id="orgName" />
+                            <span asp-validation-for="Input.Name" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Input.Identifier" class="form-label">Identifier <span class="text-danger">*</span></label>
+                            <input asp-for="Input.Identifier" class="form-control" placeholder="engineering" id="orgIdentifier" />
+                            <div class="form-text">Unique identifier (lowercase, hyphens allowed)</div>
+                            <span asp-validation-for="Input.Identifier" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Input.DisplayName" class="form-label">Display Name</label>
+                        <input asp-for="Input.DisplayName" class="form-control" placeholder="Engineering & Product Team" />
+                        <div class="form-text">Optional display name shown to users</div>
+                        <span asp-validation-for="Input.DisplayName" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Input.Description" class="form-label">Description</label>
+                        <textarea asp-for="Input.Description" class="form-control" rows="2" placeholder="Brief description of this organization"></textarea>
+                        <span asp-validation-for="Input.Description" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="form-check">
+                            <input asp-for="Input.AllowSelfRegistration" class="form-check-input" type="checkbox" />
+                            <label asp-for="Input.AllowSelfRegistration" class="form-check-label">
+                                Allow self-registration
+                            </label>
+                            <div class="form-text">If enabled, users can join this organization without an invitation</div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i> Create Organization
+                        </button>
+                        <a asp-page="./Index" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card dashboard-card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="bi bi-info-circle me-2"></i>About Organizations</h5>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted">
+                    Organizations allow you to group users of your applications. Unlike tenant users who manage the dashboard, organization members are end-users of your applications.
+                </p>
+                <h6 class="small">Key Features</h6>
+                <ul class="small text-muted mb-0">
+                    <li>Separate from tenant admin users</li>
+                    <li>Users can belong to multiple organizations</li>
+                    <li>Custom roles per organization</li>
+                    <li>Invite-based or self-registration</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        // Auto-generate identifier from name
+        document.getElementById('orgName')?.addEventListener('input', function() {
+            var identifierField = document.getElementById('orgIdentifier');
+            if (identifierField && !identifierField.dataset.userModified) {
+                var identifier = this.value
+                    .toLowerCase()
+                    .replace(/[^a-z0-9\s-]/g, '')
+                    .replace(/\s+/g, '-')
+                    .replace(/-+/g, '-')
+                    .replace(/^-|-$/g, '');
+                identifierField.value = identifier;
+            }
+        });
+
+        document.getElementById('orgIdentifier')?.addEventListener('input', function() {
+            this.dataset.userModified = 'true';
+        });
+    </script>
+}

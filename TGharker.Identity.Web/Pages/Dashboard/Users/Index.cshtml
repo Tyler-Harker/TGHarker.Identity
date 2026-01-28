@@ -99,6 +99,29 @@
                     </tbody>
                 </table>
             </div>
+
+            @if (Model.TotalPages > 1)
+            {
+                <div class="card-footer d-flex justify-content-between align-items-center">
+                    <small class="text-muted">Showing @Model.Users.Count of @Model.TotalCount users</small>
+                    <nav>
+                        <ul class="pagination pagination-sm mb-0">
+                            <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
+                                <a class="page-link" asp-page="./Index" asp-route-pageNumber="@(Model.PageNumber - 1)">Previous</a>
+                            </li>
+                            @for (var i = 1; i <= Model.TotalPages; i++)
+                            {
+                                <li class="page-item @(i == Model.PageNumber ? "active" : "")">
+                                    <a class="page-link" asp-page="./Index" asp-route-pageNumber="@i">@i</a>
+                                </li>
+                            }
+                            <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
+                                <a class="page-link" asp-page="./Index" asp-route-pageNumber="@(Model.PageNumber + 1)">Next</a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            }
         }
     </div>
 </div>

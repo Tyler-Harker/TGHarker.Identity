@@ -1,0 +1,115 @@
+@page
+@model TGharker.Identity.Web.Pages.Account.AcceptOrgInviteModel
+@{
+    ViewData["Title"] = "Join Organization";
+    Layout = "_LandingLayout";
+}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+                    {
+                        <div class="text-center mb-4">
+                            <i class="bi bi-exclamation-triangle text-danger" style="font-size: 3rem;"></i>
+                            <h4 class="mt-3">Unable to Process Invitation</h4>
+                            <p class="text-muted">@Model.ErrorMessage</p>
+                        </div>
+                        <div class="d-grid">
+                            <a asp-page="/Account/Login" class="btn btn-primary">Go to Login</a>
+                        </div>
+                    }
+                    else if (Model.InvitationAccepted)
+                    {
+                        <div class="text-center mb-4">
+                            <i class="bi bi-check-circle text-success" style="font-size: 3rem;"></i>
+                            <h4 class="mt-3">Welcome to @(Model.Organization?.DisplayName ?? Model.Organization?.Name)!</h4>
+                            <p class="text-muted">You've successfully joined the organization.</p>
+                        </div>
+                        <div class="d-grid">
+                            <a asp-page="/Dashboard/Organizations/Details" asp-route-id="@Model.Invitation?.OrganizationId" class="btn btn-primary">
+                                View Organization
+                            </a>
+                        </div>
+                    }
+                    else if (Model.Invitation != null && Model.Organization != null)
+                    {
+                        <div class="text-center mb-4">
+                            <i class="bi bi-building text-primary" style="font-size: 3rem;"></i>
+                            <h4 class="mt-3">You've been invited!</h4>
+                            <p class="text-muted mb-0">
+                                Join <strong>@(Model.Organization.DisplayName ?? Model.Organization.Name)</strong>
+                                @if (Model.Tenant != null)
+                                {
+                                    <span>in @(Model.Tenant.DisplayName ?? Model.Tenant.Name)</span>
+                                }
+                            </p>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(Model.Organization.Description))
+                        {
+                            <div class="bg-light rounded p-3 mb-4">
+                                <small class="text-muted">@Model.Organization.Description</small>
+                            </div>
+                        }
+
+                        <div class="mb-4">
+                            <small class="text-muted d-block mb-2">You'll be granted these roles:</small>
+                            <div>
+                                @foreach (var role in Model.Invitation.Roles)
+                                {
+                                    <span class="badge bg-secondary me-1">@role</span>
+                                }
+                            </div>
+                        </div>
+
+                        @if (User.Identity?.IsAuthenticated ?? false)
+                        {
+                            <form method="post">
+                                <input type="hidden" name="Token" value="@Model.Token" />
+                                <div class="d-grid gap-2">
+                                    <button type="submit" class="btn btn-primary btn-lg">
+                                        <i class="bi bi-check-lg me-2"></i>Accept Invitation
+                                    </button>
+                                </div>
+                            </form>
+                            <p class="text-center text-muted small mt-3 mb-0">
+                                Logged in as @User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
+                            </p>
+                        }
+                        else
+                        {
+                            <div class="d-grid gap-2">
+                                <a asp-page="/Account/Login" asp-route-returnUrl="@($"/Account/AcceptOrgInvite?token={Model.Token}")" class="btn btn-primary btn-lg">
+                                    <i class="bi bi-box-arrow-in-right me-2"></i>Sign In to Accept
+                                </a>
+                                <a asp-page="/Account/Register" asp-route-org_invite="@Model.Token" class="btn btn-outline-secondary">
+                                    <i class="bi bi-person-plus me-2"></i>Create Account
+                                </a>
+                            </div>
+                        }
+
+                        <hr class="my-4">
+                        <p class="text-center text-muted small mb-0">
+                            <i class="bi bi-clock me-1"></i>
+                            This invitation expires @Model.Invitation.ExpiresAt.ToString("MMMM d, yyyy")
+                        </p>
+                    }
+                    else
+                    {
+                        <div class="text-center">
+                            <i class="bi bi-question-circle text-muted" style="font-size: 3rem;"></i>
+                            <h4 class="mt-3">Invalid Invitation</h4>
+                            <p class="text-muted">This invitation link is not valid.</p>
+                        </div>
+                        <div class="d-grid">
+                            <a asp-page="/Account/Login" class="btn btn-primary">Go to Login</a>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

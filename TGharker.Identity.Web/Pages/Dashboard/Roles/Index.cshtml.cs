@@ -2,6 +2,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using TGHarker.Identity.Abstractions.Grains;
 using TGHarker.Identity.Abstractions.Models;
+using TGHarker.Identity.Abstractions.Models.Generated;
+using TGHarker.Orleans.Search.Core.Extensions;
+using TGHarker.Orleans.Search.Generated;
 
 namespace TGharker.Identity.Web.Pages.Dashboard.Roles;
 
@@ -43,21 +46,27 @@ public class IndexModel : PageModel
         var tenantGrain = _clusterClient.GetGrain<ITenantGrain>(tenantId);
 
         var roles = await tenantGrain.GetRolesAsync();
-        var memberIds = await tenantGrain.GetMemberUserIdsAsync();
 
-        // Count members per role
-        var roleMemberCounts = new Dictionary<string, int>();
-        foreach (var userId in memberIds)
+        // Search for all active memberships in this tenant to count role assignments
+        var membershipGrains = await _clusterClient.Search<ITenantMembershipGrain>()
+            .Where(m => m.TenantId == tenantId && m.IsActive)
+            .ToListAsync();
+
+        var memberships = new List<TenantMembershipState>();
+        foreach (var grain in membershipGrains)
         {
-            var membershipGrain = _clusterClient.GetGrain<ITenantMembershipGrain>($"{tenantId}/member-{userId}");
-            var membership = await membershipGrain.GetStateAsync();
-            if (membership != null && membership.IsActive)
+            var state = await grain.GetStateAsync();
+            if (state != null) memberships.Add(state);
+        }
+
+        // Count members per role from the memberships list
+        var roleMemberCounts = new Dictionary<string, int>();
+        foreach (var membership in memberships)
+        {
+            foreach (var roleId in membership.Roles)
             {
-                foreach (var roleId in membership.Roles)
-                {
-                    roleMemberCounts.TryAdd(roleId, 0);
-                    roleMemberCounts[roleId]++;
-                }
+                roleMemberCounts.TryAdd(roleId, 0);
+                roleMemberCounts[roleId]++;
             }
         }
 

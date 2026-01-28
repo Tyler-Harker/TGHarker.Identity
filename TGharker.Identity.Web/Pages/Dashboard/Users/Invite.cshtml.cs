@@ -31,6 +31,8 @@ public class InviteModel : PageModel
 
     public List<TenantRole> AvailableRoles { get; set; } = [];
     public string? ErrorMessage { get; set; }
+    public string? InviteUrl { get; set; }
+    public bool ShowInviteLink { get; set; }
 
     public class InputModel
     {
@@ -43,6 +45,9 @@ public class InviteModel : PageModel
 
     private string GetTenantId() => User.FindFirst("tenant_id")?.Value
         ?? throw new InvalidOperationException("No tenant in session");
+
+    private string GetUserId() => User.FindFirst("user_id")?.Value
+        ?? throw new InvalidOperationException("No user in session");
 
     public async Task OnGetAsync()
     {
@@ -61,6 +66,7 @@ public class InviteModel : PageModel
         }
 
         var tenantId = GetTenantId();
+        var currentUserId = GetUserId();
         var email = Input.Email.ToLowerInvariant().Trim();
 
         // Check if user exists using search
@@ -69,9 +75,8 @@ public class InviteModel : PageModel
 
         if (userState == null)
         {
-            ModelState.AddModelError("Input.Email", "No user found with this email. They must register first.");
-            await LoadRolesAsync();
-            return Page();
+            // User doesn't exist - create invitation
+            return await CreateInvitationAsync(tenantId, email, currentUserId);
         }
 
         var userId = userState.Id;
@@ -87,7 +92,7 @@ public class InviteModel : PageModel
             return Page();
         }
 
-        // Create membership
+        // Create membership directly for existing user
         var membershipGrain = _clusterClient.GetGrain<ITenantMembershipGrain>($"{tenantId}/member-{userId}");
         var result = await membershipGrain.CreateAsync(new CreateMembershipRequest
         {
@@ -114,6 +119,63 @@ public class InviteModel : PageModel
 
         TempData["SuccessMessage"] = $"User {email} has been added to the tenant.";
         return RedirectToPage("./Index");
+    }
+
+    private async Task<IActionResult> CreateInvitationAsync(string tenantId, string email, string invitedByUserId)
+    {
+        // Check if there's already a pending invitation
+        var existingInvitation = await _searchService.GetPendingInvitationAsync(tenantId, email);
+        if (existingInvitation != null)
+        {
+            var existingState = await existingInvitation.GetStateAsync();
+            if (existingState != null)
+            {
+                // Show existing invitation link
+                InviteUrl = GenerateInviteUrl(existingState.Token);
+                ShowInviteLink = true;
+                await LoadRolesAsync();
+
+                _logger.LogInformation("Returning existing invitation for {Email} to tenant {TenantId}",
+                    email, tenantId);
+
+                return Page();
+            }
+        }
+
+        // Create new invitation
+        var invitationId = Guid.CreateVersion7().ToString();
+        var invitationGrain = _clusterClient.GetGrain<IInvitationGrain>($"{tenantId}/invitation-{invitationId}");
+
+        var result = await invitationGrain.CreateAsync(new CreateInvitationRequest
+        {
+            TenantId = tenantId,
+            Email = email,
+            InvitedByUserId = invitedByUserId,
+            Roles = [Input.Role]
+        });
+
+        if (!result.Success)
+        {
+            ErrorMessage = result.Error ?? "Failed to create invitation.";
+            await LoadRolesAsync();
+            return Page();
+        }
+
+        InviteUrl = GenerateInviteUrl(result.Token!);
+        ShowInviteLink = true;
+        await LoadRolesAsync();
+
+        _logger.LogInformation("Created invitation for {Email} to tenant {TenantId} with role {Role}",
+            email, tenantId, Input.Role);
+
+        return Page();
+    }
+
+    private string GenerateInviteUrl(string token)
+    {
+        var request = HttpContext.Request;
+        var baseUrl = $"{request.Scheme}://{request.Host}";
+        return $"{baseUrl}/Account/AcceptInvite?token={Uri.EscapeDataString(token)}";
     }
 
     private async Task LoadRolesAsync()

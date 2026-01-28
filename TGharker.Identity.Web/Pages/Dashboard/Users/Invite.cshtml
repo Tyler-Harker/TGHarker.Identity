@@ -20,6 +20,24 @@
     </div>
 }
 
+@if (Model.ShowInviteLink && !string.IsNullOrEmpty(Model.InviteUrl))
+{
+    <div class="alert alert-success" role="alert">
+        <h5 class="alert-heading"><i class="bi bi-envelope-check me-2"></i>Invitation Created</h5>
+        <p>An invitation has been created for <strong>@Model.Input.Email</strong>. Share the link below with them to join this tenant.</p>
+        <hr />
+        <div class="input-group">
+            <input type="text" class="form-control" id="inviteUrl" value="@Model.InviteUrl" readonly />
+            <button class="btn btn-outline-secondary" type="button" onclick="copyInviteUrl()">
+                <i class="bi bi-clipboard me-1"></i> Copy
+            </button>
+        </div>
+        <div class="form-text mt-2">
+            <i class="bi bi-clock me-1"></i> This invitation expires in 7 days.
+        </div>
+    </div>
+}
+
 <div class="row">
     <div class="col-lg-6">
         <div class="card dashboard-card">
@@ -27,7 +45,7 @@
                 <h5 class="card-title mb-0">Add User to Tenant</h5>
             </div>
             <div class="card-body">
-                <p class="text-muted">Enter the email of a registered user to add them to this tenant.</p>
+                <p class="text-muted">Enter the email address to add a user to this tenant. If they're not registered, an invitation link will be generated.</p>
 
                 <form method="post">
                     <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
@@ -36,7 +54,7 @@
                         <label asp-for="Input.Email" class="form-label">Email Address <span class="text-danger">*</span></label>
                         <input asp-for="Input.Email" class="form-control" placeholder="user@example.com" />
                         <span asp-validation-for="Input.Email" class="text-danger"></span>
-                        <div class="form-text">The user must have already registered an account.</div>
+                        <div class="form-text">Existing users will be added directly. New users will receive an invite link.</div>
                     </div>
 
                     <div class="mb-4">
@@ -95,4 +113,23 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        function copyInviteUrl() {
+            const urlInput = document.getElementById('inviteUrl');
+            urlInput.select();
+            urlInput.setSelectionRange(0, 99999);
+            navigator.clipboard.writeText(urlInput.value).then(function() {
+                const btn = event.target.closest('button');
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = '<i class="bi bi-check me-1"></i> Copied!';
+                btn.classList.remove('btn-outline-secondary');
+                btn.classList.add('btn-success');
+                setTimeout(function() {
+                    btn.innerHTML = originalHtml;
+                    btn.classList.remove('btn-success');
+                    btn.classList.add('btn-outline-secondary');
+                }, 2000);
+            });
+        }
+    </script>
 }

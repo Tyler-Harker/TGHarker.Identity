@@ -28,4 +28,10 @@ public interface IUserGrain : IGrainWithStringKey
     Task<IReadOnlyList<string>> GetTenantMembershipsAsync();
     Task AddTenantMembershipAsync(string tenantId);
     Task RemoveTenantMembershipAsync(string tenantId);
+
+    // Organization membership management
+    Task<IReadOnlyList<OrganizationMembershipRef>> GetOrganizationMembershipsAsync();
+    Task<IReadOnlyList<OrganizationMembershipRef>> GetOrganizationMembershipsInTenantAsync(string tenantId);
+    Task AddOrganizationMembershipAsync(string tenantId, string organizationId);
+    Task RemoveOrganizationMembershipAsync(string tenantId, string organizationId);
 }

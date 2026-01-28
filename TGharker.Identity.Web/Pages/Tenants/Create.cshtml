@@ -1,0 +1,89 @@
+@page
+@model TGharker.Identity.Web.Pages.Tenants.CreateModel
+@{
+    ViewData["Title"] = "Create Tenant";
+    Layout = "_LandingLayout";
+}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <h2 class="card-title text-center mb-4">Create New Tenant</h2>
+
+                    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            @Model.ErrorMessage
+                        </div>
+                    }
+
+                    <form method="post">
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                        <div class="mb-3">
+                            <label asp-for="Input.Name" class="form-label">Tenant Name <span class="text-danger">*</span></label>
+                            <input asp-for="Input.Name" class="form-control" placeholder="Acme Corporation" id="tenantName" />
+                            <span asp-validation-for="Input.Name" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Input.Identifier" class="form-label">Identifier <span class="text-danger">*</span></label>
+                            <input asp-for="Input.Identifier" class="form-control" placeholder="acme-corp" id="tenantIdentifier" />
+                            <div class="form-text">URL-safe identifier (lowercase letters, numbers, and hyphens only)</div>
+                            <span asp-validation-for="Input.Identifier" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="Input.DisplayName" class="form-label">Display Name <span class="text-muted">(optional)</span></label>
+                            <input asp-for="Input.DisplayName" class="form-control" placeholder="Acme Corp" />
+                            <span asp-validation-for="Input.DisplayName" class="text-danger"></span>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-plus-lg me-2"></i>Create Tenant
+                            </button>
+                            <a href="/Dashboard" class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-info-circle me-2"></i>About Tenants</h6>
+                    <p class="card-text small text-muted mb-0">
+                        Tenants are isolated environments for your applications. Each tenant has its own users,
+                        applications, and settings. You'll be the owner of this new tenant.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        // Auto-generate identifier from name
+        document.getElementById('tenantName')?.addEventListener('input', function() {
+            var identifierField = document.getElementById('tenantIdentifier');
+            if (identifierField && !identifierField.dataset.userModified) {
+                var identifier = this.value
+                    .toLowerCase()
+                    .replace(/[^a-z0-9\s-]/g, '')
+                    .replace(/\s+/g, '-')
+                    .replace(/-+/g, '-')
+                    .replace(/^-|-$/g, '');
+                identifierField.value = identifier;
+            }
+        });
+
+        document.getElementById('tenantIdentifier')?.addEventListener('input', function() {
+            this.dataset.userModified = 'true';
+        });
+    </script>
+}

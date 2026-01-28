@@ -1,0 +1,117 @@
+@page
+@model TGharker.Identity.Web.Pages.Dashboard.Organizations.IndexModel
+@{
+    ViewData["Title"] = "Organizations";
+}
+
+@section PageActions {
+    <a asp-page="./Create" class="btn btn-primary">
+        <i class="bi bi-plus-lg me-1"></i> Create Organization
+    </a>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="card dashboard-card">
+    <div class="card-body p-0">
+        @if (Model.Organizations.Count == 0)
+        {
+            <div class="empty-state">
+                <i class="bi bi-building"></i>
+                <h5>No organizations yet</h5>
+                <p class="mb-3">Create organizations to group your application users.</p>
+                <a asp-page="./Create" class="btn btn-primary">
+                    <i class="bi bi-plus-lg me-1"></i> Create Organization
+                </a>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-dashboard table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Organization</th>
+                            <th>Identifier</th>
+                            <th>Members</th>
+                            <th>Created</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var org in Model.Organizations)
+                        {
+                            <tr class="cursor-pointer" onclick="window.location='@Url.Page("./Details", new { id = org.Id })'">
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="org-icon me-3">
+                                            <i class="bi bi-building fs-4 text-muted"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-semibold">@(org.DisplayName ?? org.Name)</div>
+                                            @if (!string.IsNullOrEmpty(org.Description))
+                                            {
+                                                <small class="text-muted">@(org.Description.Length > 50 ? org.Description[..50] + "..." : org.Description)</small>
+                                            }
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <code class="text-muted">@org.Identifier</code>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">@org.MemberCount member@(org.MemberCount != 1 ? "s" : "")</span>
+                                </td>
+                                <td>
+                                    <small class="text-muted">@org.CreatedAt.ToString("MMM d, yyyy")</small>
+                                </td>
+                                <td class="text-end" onclick="event.stopPropagation()">
+                                    <a asp-page="./Details" asp-route-id="@org.Id" class="btn btn-sm btn-outline-secondary">
+                                        <i class="bi bi-chevron-right"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card-footer">
+                <small class="text-muted">Showing @Model.Organizations.Count of @Model.TotalCount organizations</small>
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .cursor-pointer {
+        cursor: pointer;
+    }
+    .cursor-pointer:hover {
+        background-color: var(--bs-light);
+    }
+    .empty-state {
+        padding: 3rem;
+        text-align: center;
+    }
+    .empty-state i {
+        font-size: 3rem;
+        color: var(--bs-secondary);
+        margin-bottom: 1rem;
+        display: block;
+    }
+</style>

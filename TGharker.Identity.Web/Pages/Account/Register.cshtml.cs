@@ -34,7 +34,22 @@ public class RegisterModel : PageModel
     [BindProperty(SupportsGet = true, Name = "tenant")]
     public string? TenantIdentifier { get; set; }
 
+    [BindProperty(SupportsGet = true, Name = "invite")]
+    public string? InviteToken { get; set; }
+
+    [BindProperty(SupportsGet = true, Name = "org_invite")]
+    public string? OrgInviteToken { get; set; }
+
     public string? ErrorMessage { get; set; }
+
+    // Invitation info for display
+    public InvitationState? Invitation { get; set; }
+    public TenantState? InvitationTenant { get; set; }
+
+    // Organization invitation info
+    public OrganizationInvitationState? OrgInvitation { get; set; }
+    public OrganizationState? InvitationOrganization { get; set; }
+    public TenantState? OrgInvitationTenant { get; set; }
 
     public class InputModel
     {
@@ -61,12 +76,69 @@ public class RegisterModel : PageModel
         public string ConfirmPassword { get; set; } = string.Empty;
     }
 
-    public void OnGet()
+    public async Task OnGetAsync()
     {
+        await LoadInvitationAsync();
+        await LoadOrgInvitationAsync();
+    }
+
+    private async Task LoadInvitationAsync()
+    {
+        if (string.IsNullOrEmpty(InviteToken))
+            return;
+
+        var invitationGrain = await _searchService.GetInvitationByTokenAsync(InviteToken);
+        if (invitationGrain == null)
+            return;
+
+        Invitation = await invitationGrain.GetStateAsync();
+        if (Invitation == null || !await invitationGrain.IsValidAsync())
+        {
+            Invitation = null;
+            return;
+        }
+
+        // Pre-fill email from invitation
+        Input.Email = Invitation.Email;
+
+        // Load tenant info
+        var tenantGrain = _clusterClient.GetGrain<ITenantGrain>(Invitation.TenantId);
+        InvitationTenant = await tenantGrain.GetStateAsync();
+    }
+
+    private async Task LoadOrgInvitationAsync()
+    {
+        if (string.IsNullOrEmpty(OrgInviteToken))
+            return;
+
+        var invitationGrain = await _searchService.GetOrganizationInvitationByTokenAsync(OrgInviteToken);
+        if (invitationGrain == null)
+            return;
+
+        OrgInvitation = await invitationGrain.GetStateAsync();
+        if (OrgInvitation == null || !await invitationGrain.IsValidAsync())
+        {
+            OrgInvitation = null;
+            return;
+        }
+
+        // Pre-fill email from invitation
+        Input.Email = OrgInvitation.Email;
+
+        // Load tenant and organization info
+        var tenantGrain = _clusterClient.GetGrain<ITenantGrain>(OrgInvitation.TenantId);
+        OrgInvitationTenant = await tenantGrain.GetStateAsync();
+
+        var orgGrain = _clusterClient.GetGrain<IOrganizationGrain>($"{OrgInvitation.TenantId}/org-{OrgInvitation.OrganizationId}");
+        InvitationOrganization = await orgGrain.GetStateAsync();
     }
 
     public async Task<IActionResult> OnPostAsync()
     {
+        // Load invitations if present (for validation)
+        await LoadInvitationAsync();
+        await LoadOrgInvitationAsync();
+
         if (!ModelState.IsValid)
         {
             return Page();
@@ -108,8 +180,62 @@ public class RegisterModel : PageModel
 
         _logger.LogInformation("Created new user {UserId} with email {Email}", userId, Input.Email);
 
-        // If tenant is specified, add user to tenant
-        if (!string.IsNullOrEmpty(TenantIdentifier))
+        // Handle tenant invitation if present
+        if (!string.IsNullOrEmpty(InviteToken))
+        {
+            var invitationGrain = await _searchService.GetInvitationByTokenAsync(InviteToken);
+            if (invitationGrain != null && await invitationGrain.IsValidAsync())
+            {
+                var acceptResult = await invitationGrain.AcceptAsync(userId);
+                if (acceptResult.Success)
+                {
+                    _logger.LogInformation("User {UserId} registered and accepted invitation to tenant {TenantId}",
+                        userId, acceptResult.TenantId);
+
+                    // Redirect to login with success message
+                    return RedirectToPage("/Account/Login", new
+                    {
+                        returnUrl = ReturnUrl,
+                        registered = true,
+                        joined = true
+                    });
+                }
+                else
+                {
+                    _logger.LogWarning("User {UserId} registered but failed to accept invitation: {Error}",
+                        userId, acceptResult.Error);
+                }
+            }
+        }
+        // Handle organization invitation if present
+        else if (!string.IsNullOrEmpty(OrgInviteToken))
+        {
+            var orgInvitationGrain = await _searchService.GetOrganizationInvitationByTokenAsync(OrgInviteToken);
+            if (orgInvitationGrain != null && await orgInvitationGrain.IsValidAsync())
+            {
+                var acceptResult = await orgInvitationGrain.AcceptAsync(userId);
+                if (acceptResult.Success)
+                {
+                    _logger.LogInformation("User {UserId} registered and accepted organization invitation to org {OrgId} in tenant {TenantId}",
+                        userId, acceptResult.OrganizationId, acceptResult.TenantId);
+
+                    // Redirect to login with success message
+                    return RedirectToPage("/Account/Login", new
+                    {
+                        returnUrl = ReturnUrl,
+                        registered = true,
+                        joined_org = true
+                    });
+                }
+                else
+                {
+                    _logger.LogWarning("User {UserId} registered but failed to accept organization invitation: {Error}",
+                        userId, acceptResult.Error);
+                }
+            }
+        }
+        // If tenant is specified (but no invitation), add user to tenant
+        else if (!string.IsNullOrEmpty(TenantIdentifier))
         {
             var tenantGrain = await _searchService.GetTenantByIdentifierAsync(TenantIdentifier);
             var tenantState = tenantGrain != null ? await tenantGrain.GetStateAsync() : null;

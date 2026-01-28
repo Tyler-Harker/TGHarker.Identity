@@ -35,4 +35,5 @@ public sealed class UserState
     [Id(17)] public DateTime? PasswordResetTokenExpiry { get; set; }
     [Id(18)] public string? EmailVerificationToken { get; set; }
     [Id(19)] public DateTime? EmailVerificationTokenExpiry { get; set; }
+    [Id(20)] public List<OrganizationMembershipRef> OrganizationMemberships { get; set; } = [];
 }

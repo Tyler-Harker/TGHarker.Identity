@@ -129,7 +129,12 @@ public sealed class TenantGrain : Grain, ITenantGrain
                     WellKnownPermissions.ClientsCreate,
                     WellKnownPermissions.ClientsEdit,
                     WellKnownPermissions.ClientsDelete,
-                    WellKnownPermissions.ClientsManageSecrets
+                    WellKnownPermissions.ClientsManageSecrets,
+                    WellKnownPermissions.OrganizationsView,
+                    WellKnownPermissions.OrganizationsCreate,
+                    WellKnownPermissions.OrganizationsEdit,
+                    WellKnownPermissions.OrganizationsDelete,
+                    WellKnownPermissions.OrganizationsManageMembers
                 ],
                 CreatedAt = now
             },
@@ -143,7 +148,8 @@ public sealed class TenantGrain : Grain, ITenantGrain
                 [
                     WellKnownPermissions.UsersView,
                     WellKnownPermissions.RolesView,
-                    WellKnownPermissions.ClientsView
+                    WellKnownPermissions.ClientsView,
+                    WellKnownPermissions.OrganizationsView
                 ],
                 CreatedAt = now
             }
@@ -371,5 +377,27 @@ public sealed class TenantGrain : Grain, ITenantGrain
         _state.State.Roles.Remove(role);
         await _state.WriteStateAsync();
         return true;
+    }
+
+    public Task<IReadOnlyList<string>> GetOrganizationIdsAsync()
+    {
+        return Task.FromResult<IReadOnlyList<string>>(_state.State.OrganizationIds);
+    }
+
+    public async Task AddOrganizationAsync(string organizationId)
+    {
+        if (!_state.State.OrganizationIds.Contains(organizationId))
+        {
+            _state.State.OrganizationIds.Add(organizationId);
+            await _state.WriteStateAsync();
+        }
+    }
+
+    public async Task RemoveOrganizationAsync(string organizationId)
+    {
+        if (_state.State.OrganizationIds.Remove(organizationId))
+        {
+            await _state.WriteStateAsync();
+        }
     }
 }

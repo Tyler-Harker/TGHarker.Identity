@@ -1,8 +1,12 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using TGHarker.Identity.Abstractions.Grains;
 using TGHarker.Identity.Abstractions.Models;
+using TGHarker.Identity.Abstractions.Models.Generated;
+using TGHarker.Orleans.Search.Core.Extensions;
+using TGHarker.Orleans.Search.Generated;
 
 namespace TGharker.Identity.Web.Pages.Dashboard.Users;
 
@@ -17,6 +21,15 @@ public class IndexModel : PageModel
     }
 
     public List<UserViewModel> Users { get; set; } = [];
+
+    [BindProperty(SupportsGet = true)]
+    public int PageNumber { get; set; } = 1;
+
+    public int PageSize { get; set; } = 10;
+    public int TotalCount { get; set; }
+    public int TotalPages => (int)Math.Ceiling(TotalCount / (double)PageSize);
+    public bool HasPreviousPage => PageNumber > 1;
+    public bool HasNextPage => PageNumber < TotalPages;
 
     public class UserViewModel
     {
@@ -50,22 +63,31 @@ public class IndexModel : PageModel
         var tenantId = GetTenantId();
         var currentUserId = GetUserId();
 
-        var tenantGrain = _clusterClient.GetGrain<ITenantGrain>(tenantId);
-        var memberIds = await tenantGrain.GetMemberUserIdsAsync();
-
         // Load available roles for display
+        var tenantGrain = _clusterClient.GetGrain<ITenantGrain>(tenantId);
         var roles = await tenantGrain.GetRolesAsync();
         var roleDict = roles.ToDictionary(r => r.Id);
 
-        foreach (var userId in memberIds)
+        // Search for active memberships in this tenant
+        TotalCount = await _clusterClient.Search<ITenantMembershipGrain>()
+            .Where(m => m.TenantId == tenantId && m.IsActive)
+            .CountAsync();
+
+        var membershipGrains = await _clusterClient.Search<ITenantMembershipGrain>()
+            .Where(m => m.TenantId == tenantId && m.IsActive)
+            .Skip((PageNumber - 1) * PageSize)
+            .Take(PageSize)
+            .ToListAsync();
+
+        foreach (var membershipGrain in membershipGrains)
         {
-            var userGrain = _clusterClient.GetGrain<IUserGrain>($"user-{userId}");
+            var membership = await membershipGrain.GetStateAsync();
+            if (membership == null) continue;
+
+            var userGrain = _clusterClient.GetGrain<IUserGrain>($"user-{membership.UserId}");
             var user = await userGrain.GetStateAsync();
 
-            var membershipGrain = _clusterClient.GetGrain<ITenantMembershipGrain>($"{tenantId}/member-{userId}");
-            var membership = await membershipGrain.GetStateAsync();
-
-            if (user != null && membership != null && membership.IsActive)
+            if (user != null)
             {
                 var roleInfos = membership.Roles
                     .Where(roleId => roleDict.ContainsKey(roleId))
@@ -81,13 +103,13 @@ public class IndexModel : PageModel
 
                 Users.Add(new UserViewModel
                 {
-                    UserId = userId,
+                    UserId = membership.UserId,
                     Email = user.Email,
                     Name = string.IsNullOrEmpty(user.GivenName) ? null : $"{user.GivenName} {user.FamilyName}".Trim(),
                     RoleInfos = roleInfos,
                     IsActive = membership.IsActive,
                     JoinedAt = membership.JoinedAt,
-                    IsCurrentUser = userId == currentUserId
+                    IsCurrentUser = membership.UserId == currentUserId
                 });
             }
         }

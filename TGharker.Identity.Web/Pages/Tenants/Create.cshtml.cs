@@ -34,6 +34,9 @@ public partial class CreateModel : PageModel
     [BindProperty]
     public InputModel Input { get; set; } = new();
 
+    [BindProperty(SupportsGet = true)]
+    public string? ReturnUrl { get; set; }
+
     public string? ErrorMessage { get; set; }
 
     public class InputModel
@@ -125,6 +128,11 @@ public partial class CreateModel : PageModel
         await _sessionService.CompleteSessionAsync(HttpContext, userId, user, createResult.TenantId!, rememberMe);
 
         TempData["SuccessMessage"] = $"Tenant '{Input.Name}' created successfully!";
+
+        if (!string.IsNullOrEmpty(ReturnUrl) && Url.IsLocalUrl(ReturnUrl))
+        {
+            return Redirect(ReturnUrl);
+        }
         return RedirectToPage("/Dashboard/Index");
     }
 

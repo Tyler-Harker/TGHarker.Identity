@@ -33,10 +33,7 @@
             <div class="empty-state">
                 <i class="bi bi-building"></i>
                 <h5>No organizations yet</h5>
-                <p class="mb-3">Create organizations to group your application users.</p>
-                <a asp-page="./Create" class="btn btn-primary">
-                    <i class="bi bi-plus-lg me-1"></i> Create Organization
-                </a>
+                <p class="mb-0">Create organizations to group your application users.</p>
             </div>
         }
         else
@@ -97,21 +94,3 @@
     </div>
 </div>
 
-<style>
-    .cursor-pointer {
-        cursor: pointer;
-    }
-    .cursor-pointer:hover {
-        background-color: var(--bs-light);
-    }
-    .empty-state {
-        padding: 3rem;
-        text-align: center;
-    }
-    .empty-state i {
-        font-size: 3rem;
-        color: var(--bs-secondary);
-        margin-bottom: 1rem;
-        display: block;
-    }
-</style>

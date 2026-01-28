@@ -21,6 +21,7 @@ public class TenantRequiredMiddleware
 
     private static readonly string[] AllowedPathPrefixes =
     [
+        "/tenants/",
         "/.well-known/",
         "/connect/",
         "/api/",

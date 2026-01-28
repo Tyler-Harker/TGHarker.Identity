@@ -75,6 +75,13 @@ public class IndexModel : PageModel
         }
 
         await LoadTenantsAsync();
+
+        // If user has no tenants, redirect to create page
+        if (TotalCount == 0)
+        {
+            return RedirectToPage("./Create", new { ReturnUrl });
+        }
+
         return Page();
     }
 

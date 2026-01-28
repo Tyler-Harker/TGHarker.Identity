@@ -20,6 +20,7 @@
                     }
 
                     <form method="post">
+                        <input type="hidden" asp-for="ReturnUrl" />
                         <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
                         <div class="mb-3">
@@ -45,7 +46,7 @@
                             <button type="submit" class="btn btn-primary btn-lg">
                                 <i class="bi bi-plus-lg me-2"></i>Create Tenant
                             </button>
-                            <a href="/Dashboard" class="btn btn-outline-secondary">Cancel</a>
+                            <a href="/Tenants" class="btn btn-outline-secondary">Cancel</a>
                         </div>
                     </form>
                 </div>

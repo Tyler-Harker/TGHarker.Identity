@@ -55,7 +55,7 @@ public sealed class OrganizationGrain : Grain, IOrganizationGrain
             Settings = request.Settings ?? new OrganizationSettings(),
             CreatedAt = DateTime.UtcNow,
             CreatedByUserId = request.CreatorUserId,
-            MemberUserIds = [request.CreatorUserId],
+            MemberUserIds = [],
             Roles = CreateDefaultRoles()
         };
 
@@ -64,22 +64,6 @@ public sealed class OrganizationGrain : Grain, IOrganizationGrain
         // Add organization to tenant's list
         var tenantGrain = _grainFactory.GetGrain<ITenantGrain>(request.TenantId);
         await tenantGrain.AddOrganizationAsync(organizationId);
-
-        // Create membership for creator with owner role
-        var membershipKey = $"{request.TenantId}/org-{organizationId}/member-{request.CreatorUserId}";
-        var membershipGrain = _grainFactory.GetGrain<IOrganizationMembershipGrain>(membershipKey);
-
-        await membershipGrain.CreateAsync(new CreateOrganizationMembershipRequest
-        {
-            UserId = request.CreatorUserId,
-            OrganizationId = organizationId,
-            TenantId = request.TenantId,
-            Roles = [WellKnownOrganizationRoles.Owner, WellKnownOrganizationRoles.Admin]
-        });
-
-        // Add organization ref to creator's memberships
-        var userGrain = _grainFactory.GetGrain<IUserGrain>($"user-{request.CreatorUserId}");
-        await userGrain.AddOrganizationMembershipAsync(request.TenantId, organizationId);
 
         return new CreateOrganizationResult
         {

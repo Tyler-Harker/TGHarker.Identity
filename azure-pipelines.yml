@@ -134,7 +134,13 @@ stages:
                         az containerapp update \
                           --name identity-silo \
                           --resource-group $(resourceGroup) \
-                          --image $(acrLoginServer)/$(siloImageName):$(tag)
+                          --image $(acrLoginServer)/$(siloImageName):$(tag) \
+                          --set-env-vars \
+                            "ASPNETCORE_ENVIRONMENT=Production" \
+                            "ConnectionStrings__AzureStorage=$(STORAGE_CONNECTION_STRING)" \
+                            "ConnectionStrings__searchdb-identity=$(POSTGRES_CONNECTION_STRING)" \
+                            "Orleans__ClusterId=identity-cluster" \
+                            "Orleans__ServiceId=identity-service"
                       fi
 
                 - task: AzureCLI@2
@@ -176,7 +182,13 @@ stages:
                         az containerapp update \
                           --name identity-web \
                           --resource-group $(resourceGroup) \
-                          --image $(acrLoginServer)/$(webImageName):$(tag)
+                          --image $(acrLoginServer)/$(webImageName):$(tag) \
+                          --set-env-vars \
+                            "ASPNETCORE_ENVIRONMENT=Production" \
+                            "ConnectionStrings__AzureStorage=$(STORAGE_CONNECTION_STRING)" \
+                            "ConnectionStrings__searchdb-identity=$(POSTGRES_CONNECTION_STRING)" \
+                            "Orleans__ClusterId=identity-cluster" \
+                            "Orleans__ServiceId=identity-service"
                       fi
 
                 - task: AzureCLI@2

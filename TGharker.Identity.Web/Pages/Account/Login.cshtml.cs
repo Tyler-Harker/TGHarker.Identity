@@ -1,22 +1,29 @@
 using System.ComponentModel.DataAnnotations;
-using System.Security.Claims;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using TGHarker.Identity.Abstractions.Grains;
+using TGHarker.Orleans.Search.Core.Extensions;
+using TGHarker.Orleans.Search.Generated;
+using TGharker.Identity.Web.Services;
 
 namespace TGharker.Identity.Web.Pages.Account;
 
 public class LoginModel : PageModel
 {
     private readonly IClusterClient _clusterClient;
+    private readonly ISessionService _sessionService;
     private readonly ILogger<LoginModel> _logger;
 
-    public LoginModel(IClusterClient clusterClient, ILogger<LoginModel> logger)
+    public LoginModel(
+        IClusterClient clusterClient,
+        ISessionService sessionService,
+        ILogger<LoginModel> logger)
     {
         _clusterClient = clusterClient;
+        _sessionService = sessionService;
         _logger = logger;
     }
 
@@ -58,9 +65,10 @@ public class LoginModel : PageModel
             return Page();
         }
 
-        // Look up user by email
-        var userRegistry = _clusterClient.GetGrain<IUserRegistryGrain>("user-registry");
-        var userId = await userRegistry.GetUserIdByEmailAsync(Input.Email.ToLowerInvariant());
+        // Look up user by email using the email lock grain
+        var normalizedEmail = Input.Email.ToLowerInvariant();
+        var emailLock = _clusterClient.GetGrain<IUserEmailLockGrain>(normalizedEmail);
+        var userId = await emailLock.GetOwnerAsync();
 
         if (string.IsNullOrEmpty(userId))
         {
@@ -68,7 +76,7 @@ public class LoginModel : PageModel
             return Page();
         }
 
-        // Get user
+        // Get user grain and state
         var userGrain = _clusterClient.GetGrain<IUserGrain>($"user-{userId}");
         var user = await userGrain.GetStateAsync();
 
@@ -99,23 +107,20 @@ public class LoginModel : PageModel
         // Get user's tenant memberships
         var memberships = await userGrain.GetTenantMembershipsAsync();
 
-        if (memberships.Count == 0)
-        {
-            ErrorMessage = "You are not a member of any organization.";
-            return Page();
-        }
-
         string? selectedTenantId = null;
 
         // If tenant specified in request, verify membership
         if (!string.IsNullOrEmpty(TenantIdentifier))
         {
-            var tenantRegistry = _clusterClient.GetGrain<ITenantRegistryGrain>("tenant-registry");
-            var tenantId = await tenantRegistry.GetTenantIdByIdentifierAsync(TenantIdentifier);
+            var normalizedTenantId = TenantIdentifier.ToLowerInvariant();
+            var tenantGrain = await _clusterClient.Search<ITenantGrain>()
+                .Where(t => t.Identifier == normalizedTenantId && t.IsActive)
+                .FirstOrDefaultAsync();
+            var tenantState = tenantGrain != null ? await tenantGrain.GetStateAsync() : null;
 
-            if (!string.IsNullOrEmpty(tenantId) && memberships.Contains(tenantId))
+            if (tenantState != null && memberships.Contains(tenantState.Id))
             {
-                selectedTenantId = tenantId;
+                selectedTenantId = tenantState.Id;
             }
             else
             {
@@ -130,57 +135,16 @@ public class LoginModel : PageModel
         }
         else
         {
-            // Multiple tenants - redirect to tenant selection
-            return RedirectToPage("/Account/SelectTenant", new
-            {
-                returnUrl = ReturnUrl,
-                userId = userId
-            });
+            // Zero or multiple tenants - create partial session and redirect to tenant landing page
+            await _sessionService.CreatePartialSessionAsync(HttpContext, userId, user, Input.RememberMe);
+
+            _logger.LogInformation("User {UserId} logged in with partial session (requires tenant selection)", userId);
+
+            return RedirectToPage("/Tenants/Index", new { returnUrl = ReturnUrl });
         }
 
-        // Get tenant info
-        var tenantGrain = _clusterClient.GetGrain<ITenantGrain>(selectedTenantId!);
-        var tenant = await tenantGrain.GetStateAsync();
-
-        // Get membership for roles
-        var membershipGrain = _clusterClient.GetGrain<ITenantMembershipGrain>($"{selectedTenantId}/member-{userId}");
-        var membership = await membershipGrain.GetStateAsync();
-
-        // Create claims
-        var claims = new List<Claim>
-        {
-            new(ClaimTypes.NameIdentifier, userId),
-            new("sub", userId),
-            new(ClaimTypes.Email, user.Email),
-            new("tenant_id", selectedTenantId!),
-            new("tenant_identifier", tenant?.Identifier ?? "")
-        };
-
-        if (!string.IsNullOrEmpty(user.GivenName))
-            claims.Add(new Claim(ClaimTypes.GivenName, user.GivenName));
-
-        if (!string.IsNullOrEmpty(user.FamilyName))
-            claims.Add(new Claim(ClaimTypes.Surname, user.FamilyName));
-
-        // Add roles
-        if (membership != null)
-        {
-            foreach (var role in membership.Roles)
-            {
-                claims.Add(new Claim(ClaimTypes.Role, role));
-            }
-        }
-
-        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-        var principal = new ClaimsPrincipal(identity);
-
-        var authProperties = new AuthenticationProperties
-        {
-            IsPersistent = Input.RememberMe,
-            ExpiresUtc = Input.RememberMe ? DateTimeOffset.UtcNow.AddDays(30) : DateTimeOffset.UtcNow.AddHours(8)
-        };
-
-        await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal, authProperties);
+        // Single tenant or specific tenant requested - complete session
+        await _sessionService.CompleteSessionAsync(HttpContext, userId, user, selectedTenantId!, Input.RememberMe);
 
         _logger.LogInformation("User {UserId} logged in to tenant {TenantId}", userId, selectedTenantId);
 

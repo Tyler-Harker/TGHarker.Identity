@@ -1,0 +1,98 @@
+@page
+@using TGHarker.Identity.Abstractions.Models
+@model TGharker.Identity.Web.Pages.Dashboard.Users.InviteModel
+@{
+    ViewData["Title"] = "Add User";
+}
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-page="./Index">Users</a></li>
+        <li class="breadcrumb-item active">Add User</li>
+    </ol>
+</nav>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @Model.ErrorMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card dashboard-card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Add User to Tenant</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Enter the email of a registered user to add them to this tenant.</p>
+
+                <form method="post">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="Input.Email" class="form-label">Email Address <span class="text-danger">*</span></label>
+                        <input asp-for="Input.Email" class="form-control" placeholder="user@example.com" />
+                        <span asp-validation-for="Input.Email" class="text-danger"></span>
+                        <div class="form-text">The user must have already registered an account.</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="Input.Role" class="form-label">Role</label>
+                        <select asp-for="Input.Role" class="form-select">
+                            @foreach (var role in Model.AvailableRoles.OrderByDescending(r => r.Id == WellKnownRoles.TenantOwner).ThenByDescending(r => r.Id == WellKnownRoles.TenantAdmin).ThenBy(r => r.Name))
+                            {
+                                <option value="@role.Id" selected="@(role.Id == WellKnownRoles.User)">@role.Name</option>
+                            }
+                        </select>
+                        <div class="form-text">The role determines what permissions the user will have.</div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-person-plus me-1"></i> Add User
+                        </button>
+                        <a asp-page="./Index" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card dashboard-card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="bi bi-info-circle me-2"></i>About Roles</h5>
+            </div>
+            <div class="card-body">
+                @foreach (var role in Model.AvailableRoles.Where(r => r.IsSystem).OrderByDescending(r => r.Id == WellKnownRoles.TenantOwner).ThenByDescending(r => r.Id == WellKnownRoles.TenantAdmin))
+                {
+                    <h6 class="small">
+                        @if (role.Id == WellKnownRoles.TenantOwner)
+                        {
+                            <i class="bi bi-star text-warning me-1"></i>
+                        }
+                        else if (role.Id == WellKnownRoles.TenantAdmin)
+                        {
+                            <i class="bi bi-shield text-primary me-1"></i>
+                        }
+                        else
+                        {
+                            <i class="bi bi-person text-secondary me-1"></i>
+                        }
+                        @role.Name
+                    </h6>
+                    <p class="small text-muted @(role != Model.AvailableRoles.Where(r => r.IsSystem).Last() ? "" : "mb-0")">
+                        @(role.Description ?? $"{role.Permissions.Count} permissions")
+                    </p>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,112 @@
+@page
+@using TGHarker.Identity.Abstractions.Models
+@model TGharker.Identity.Web.Pages.Dashboard.Roles.CreateModel
+@{
+    ViewData["Title"] = "Create Role";
+    var groupedPermissions = Model.AvailablePermissions.GroupBy(p => p.Category).ToList();
+}
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-page="./Index">Roles</a></li>
+        <li class="breadcrumb-item active">Create</li>
+    </ol>
+</nav>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @Model.ErrorMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card dashboard-card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Create New Role</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label asp-for="Input.Name" class="form-label">Role Name <span class="text-danger">*</span></label>
+                            <input asp-for="Input.Name" class="form-control" placeholder="e.g., Developer" />
+                            <span asp-validation-for="Input.Name" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Input.Description" class="form-label">Description</label>
+                            <input asp-for="Input.Description" class="form-control" placeholder="Brief description of this role" />
+                            <span asp-validation-for="Input.Description" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label">Permissions</label>
+                        <p class="text-muted small">Select the permissions this role should have.</p>
+                        <div class="border rounded p-3">
+                            @foreach (var group in groupedPermissions)
+                            {
+                                <div class="mb-4">
+                                    <h6 class="text-muted text-uppercase small fw-bold mb-2">@group.Key</h6>
+                                    <div class="row">
+                                        @foreach (var perm in group)
+                                        {
+                                            <div class="col-md-6 col-lg-4">
+                                                <div class="form-check mb-2">
+                                                    <input type="checkbox"
+                                                           class="form-check-input"
+                                                           name="Input.Permissions"
+                                                           value="@perm.Permission"
+                                                           id="perm_@perm.Permission.Replace(":", "_")">
+                                                    <label class="form-check-label" for="perm_@perm.Permission.Replace(":", "_")">
+                                                        @perm.Description
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i> Create Role
+                        </button>
+                        <a asp-page="./Index" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card dashboard-card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="bi bi-info-circle me-2"></i>About Roles</h5>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted">
+                    Roles define what actions users can perform within your tenant.
+                    Assign permissions to control access to different features.
+                </p>
+                <h6 class="small">Permission Categories</h6>
+                <ul class="small text-muted mb-0">
+                    <li><strong>Tenant</strong> - Manage tenant settings</li>
+                    <li><strong>Users</strong> - Invite and manage users</li>
+                    <li><strong>Roles</strong> - Create and edit roles</li>
+                    <li><strong>Applications</strong> - Manage OAuth clients</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

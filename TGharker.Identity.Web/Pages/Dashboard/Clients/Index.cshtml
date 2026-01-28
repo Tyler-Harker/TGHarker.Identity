@@ -1,0 +1,107 @@
+@page
+@using TGHarker.Identity.Abstractions.Models
+@model TGharker.Identity.Web.Pages.Dashboard.Clients.IndexModel
+@{
+    ViewData["Title"] = "Applications";
+}
+
+@section PageActions {
+    <a asp-page="./Create" class="btn btn-primary">
+        <i class="bi bi-plus-lg me-1"></i> New Application
+    </a>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="card dashboard-card">
+    <div class="card-body p-0">
+        @if (Model.Clients.Count == 0)
+        {
+            <div class="empty-state">
+                <i class="bi bi-app-indicator"></i>
+                <h5>No applications yet</h5>
+                <p class="mb-0">Create your first OAuth application to get started.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-dashboard table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Application</th>
+                            <th>Type</th>
+                            <th>Grant Types</th>
+                            <th>Created</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var client in Model.Clients)
+                        {
+                            <tr class="cursor-pointer" onclick="window.location='@Url.Page("./Details", new { id = client.ClientId })'">
+                                <td>
+                                    <div>
+                                        <div class="fw-semibold">@(client.ClientName ?? client.ClientId)</div>
+                                        <small class="text-muted font-monospace">@client.ClientId</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    @if (client.IsConfidential)
+                                    {
+                                        <span class="badge bg-primary">Confidential</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Public</span>
+                                    }
+                                </td>
+                                <td>
+                                    @foreach (var grant in client.AllowedGrantTypes.Take(2))
+                                    {
+                                        <span class="badge bg-light text-dark me-1">@grant.Replace("_", " ")</span>
+                                    }
+                                    @if (client.AllowedGrantTypes.Count > 2)
+                                    {
+                                        <span class="badge bg-light text-dark">+@(client.AllowedGrantTypes.Count - 2)</span>
+                                    }
+                                </td>
+                                <td>
+                                    <small class="text-muted">@client.CreatedAt.ToString("MMM d, yyyy")</small>
+                                </td>
+                                <td class="text-end" onclick="event.stopPropagation()">
+                                    <a asp-page="./Details" asp-route-id="@client.ClientId" class="btn btn-sm btn-outline-secondary">
+                                        <i class="bi bi-chevron-right"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .cursor-pointer {
+        cursor: pointer;
+    }
+    .cursor-pointer:hover {
+        background-color: var(--bs-light);
+    }
+</style>

@@ -1,0 +1,116 @@
+@page "{id}"
+@using TGHarker.Identity.Abstractions.Models
+@model TGharker.Identity.Web.Pages.Dashboard.Users.EditModel
+@{
+    ViewData["Title"] = $"Edit Roles - {Model.UserName ?? Model.UserEmail}";
+}
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-page="./Index">Users</a></li>
+        <li class="breadcrumb-item"><a asp-page="./Details" asp-route-id="@Model.UserId">@(Model.UserName ?? Model.UserEmail)</a></li>
+        <li class="breadcrumb-item active">Edit Roles</li>
+    </ol>
+</nav>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @Model.ErrorMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card dashboard-card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Edit User Roles</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-4 pb-3 border-bottom">
+                    <div class="user-avatar me-3">
+                        <i class="bi bi-person-circle fs-1 text-muted"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-0">@(Model.UserName ?? Model.UserEmail)</h5>
+                        @if (!string.IsNullOrEmpty(Model.UserName))
+                        {
+                            <small class="text-muted">@Model.UserEmail</small>
+                        }
+                    </div>
+                </div>
+
+                <form method="post" asp-route-id="@Model.UserId">
+                    <div class="mb-4">
+                        <label class="form-label">Assigned Roles</label>
+                        <p class="text-muted small">Select the roles for this user. Each role grants specific permissions.</p>
+
+                        <div class="list-group">
+                            @foreach (var role in Model.AvailableRoles.OrderByDescending(r => r.Id == WellKnownRoles.TenantOwner).ThenByDescending(r => r.Id == WellKnownRoles.TenantAdmin).ThenBy(r => r.Name))
+                            {
+                                var isChecked = Model.Input.SelectedRoles.Contains(role.Id);
+                                var icon = role.Id == WellKnownRoles.TenantOwner ? "bi-star text-warning" :
+                                           role.Id == WellKnownRoles.TenantAdmin ? "bi-shield text-primary" :
+                                           role.IsSystem ? "bi-person text-secondary" : "bi-tag text-info";
+
+                                <label class="list-group-item list-group-item-action d-flex align-items-start">
+                                    <input class="form-check-input me-3 mt-1" type="checkbox"
+                                           name="Input.SelectedRoles"
+                                           value="@role.Id"
+                                           @(isChecked ? "checked" : "") />
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <i class="bi @icon me-1"></i>
+                                                <strong>@role.Name</strong>
+                                                @if (role.IsSystem)
+                                                {
+                                                    <span class="badge bg-secondary ms-1">System</span>
+                                                }
+                                            </div>
+                                            <span class="badge bg-light text-dark">@role.Permissions.Count permissions</span>
+                                        </div>
+                                        @if (!string.IsNullOrEmpty(role.Description))
+                                        {
+                                            <small class="text-muted">@role.Description</small>
+                                        }
+                                    </div>
+                                </label>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i> Save Changes
+                        </button>
+                        <a asp-page="./Details" asp-route-id="@Model.UserId" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card dashboard-card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="bi bi-info-circle me-2"></i>About Roles</h5>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted">
+                    Users can have multiple roles. Their effective permissions are the combination of all assigned role permissions.
+                </p>
+
+                <hr />
+
+                <h6 class="small text-muted text-uppercase">System Roles</h6>
+                <ul class="small mb-0">
+                    <li><strong>Owner</strong> - Full control, including billing and danger zone actions</li>
+                    <li><strong>Admin</strong> - Manage users, roles, and applications</li>
+                    <li><strong>Member</strong> - Basic access to view resources</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>

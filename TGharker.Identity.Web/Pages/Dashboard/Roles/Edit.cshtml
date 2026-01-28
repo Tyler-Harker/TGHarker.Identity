@@ -1,0 +1,112 @@
+@page "{id}"
+@using TGHarker.Identity.Abstractions.Models
+@model TGharker.Identity.Web.Pages.Dashboard.Roles.EditModel
+@{
+    ViewData["Title"] = "Edit Role";
+    var groupedPermissions = Model.AvailablePermissions.GroupBy(p => p.Category).ToList();
+}
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-page="./Index">Roles</a></li>
+        <li class="breadcrumb-item"><a asp-page="./Details" asp-route-id="@Model.RoleId">@Model.Input.Name</a></li>
+        <li class="breadcrumb-item active">Edit</li>
+    </ol>
+</nav>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @Model.ErrorMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card dashboard-card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Edit Role</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" asp-route-id="@Model.RoleId">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label asp-for="Input.Name" class="form-label">Role Name <span class="text-danger">*</span></label>
+                            <input asp-for="Input.Name" class="form-control" />
+                            <span asp-validation-for="Input.Name" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Input.Description" class="form-label">Description</label>
+                            <input asp-for="Input.Description" class="form-control" />
+                            <span asp-validation-for="Input.Description" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label">Permissions</label>
+                        <p class="text-muted small">Select the permissions this role should have.</p>
+                        <div class="border rounded p-3">
+                            @foreach (var group in groupedPermissions)
+                            {
+                                <div class="mb-4">
+                                    <h6 class="text-muted text-uppercase small fw-bold mb-2">@group.Key</h6>
+                                    <div class="row">
+                                        @foreach (var perm in group)
+                                        {
+                                            var isChecked = Model.Input.Permissions?.Contains(perm.Permission) ?? false;
+                                            <div class="col-md-6 col-lg-4">
+                                                <div class="form-check mb-2">
+                                                    <input type="checkbox"
+                                                           class="form-check-input"
+                                                           name="Input.Permissions"
+                                                           value="@perm.Permission"
+                                                           id="perm_@perm.Permission.Replace(":", "_")"
+                                                           checked="@isChecked">
+                                                    <label class="form-check-label" for="perm_@perm.Permission.Replace(":", "_")">
+                                                        @perm.Description
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i> Save Changes
+                        </button>
+                        <a asp-page="./Details" asp-route-id="@Model.RoleId" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card dashboard-card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="bi bi-info-circle me-2"></i>About Permissions</h5>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted">
+                    Permissions control what users with this role can do.
+                    Be careful when granting administrative permissions.
+                </p>
+                <div class="alert alert-warning small mb-0">
+                    <i class="bi bi-exclamation-triangle me-1"></i>
+                    Changes to role permissions take effect immediately for all users with this role.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

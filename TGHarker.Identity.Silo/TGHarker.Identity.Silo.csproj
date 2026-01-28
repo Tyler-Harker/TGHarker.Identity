@@ -4,13 +4,22 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AllowMissingPrunePackageData>true</AllowMissingPrunePackageData>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Aspire.Azure.Data.Tables" Version="13.1.0" />
     <PackageReference Include="Microsoft.Orleans.Server" Version="10.*" />
     <PackageReference Include="Microsoft.Orleans.Persistence.AzureStorage" Version="10.*" />
     <PackageReference Include="Microsoft.Orleans.Clustering.AzureStorage" Version="10.*" />
     <PackageReference Include="Aspire.Azure.Storage.Blobs" Version="13.1.0" />
+    <PackageReference Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" Version="13.1.0" />
+    <PackageReference Include="TGHarker.Orleans.Search" Version="1.0.7" />
+    <PackageReference Include="TGHarker.Orleans.Search.PostgreSQL" Version="1.0.7" />
+    <PackageReference Include="TGHarker.Orleans.Search.SourceGenerator" Version="1.0.7">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>

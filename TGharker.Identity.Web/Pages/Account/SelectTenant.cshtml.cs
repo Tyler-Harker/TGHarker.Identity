@@ -35,34 +35,10 @@ public class SelectTenantModel : PageModel
         public string? DisplayName { get; set; }
     }
 
-    public async Task<IActionResult> OnGetAsync()
+    public IActionResult OnGetAsync()
     {
-        if (string.IsNullOrEmpty(UserId))
-        {
-            return RedirectToPage("/Account/Login");
-        }
-
-        var userGrain = _clusterClient.GetGrain<IUserGrain>($"user-{UserId}");
-        var memberships = await userGrain.GetTenantMembershipsAsync();
-
-        foreach (var tenantId in memberships)
-        {
-            var tenantGrain = _clusterClient.GetGrain<ITenantGrain>(tenantId);
-            var tenant = await tenantGrain.GetStateAsync();
-
-            if (tenant != null && tenant.IsActive)
-            {
-                Tenants.Add(new TenantInfo
-                {
-                    Id = tenant.Id,
-                    Identifier = tenant.Identifier,
-                    Name = tenant.Name,
-                    DisplayName = tenant.DisplayName
-                });
-            }
-        }
-
-        return Page();
+        // Redirect to the new unified tenant landing page
+        return RedirectToPage("/Tenants/Index", new { returnUrl = ReturnUrl });
     }
 
     public async Task<IActionResult> OnGetSelectAsync(string tenantId, string userId, string? returnUrl)

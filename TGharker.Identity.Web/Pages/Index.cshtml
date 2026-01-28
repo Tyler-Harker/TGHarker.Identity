@@ -1,10 +1,305 @@
-﻿@page
+@page
 @model IndexModel
 @{
-    ViewData["Title"] = "Home page";
+    ViewData["Title"] = "Modern Identity & Access Management";
+    Layout = "_LandingLayout";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h1 class="hero-title">
+                    Secure Identity for <span class="text-primary">Modern Apps</span>
+                </h1>
+                <p class="hero-subtitle">
+                    Add authentication and authorization to your applications in minutes.
+                    OAuth 2.0 & OpenID Connect compliant, multi-tenant ready, built for developers.
+                </p>
+                <div class="hero-buttons">
+                    <a asp-page="/Account/Register" class="btn btn-primary btn-lg px-4">
+                        Start Free <i class="bi bi-arrow-right ms-2"></i>
+                    </a>
+                    <a href="#features" class="btn btn-outline-secondary btn-lg px-4">
+                        Learn More
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="hero-image">
+                    <div class="card shadow-lg border-0">
+                        <div class="card-body p-4">
+                            <div class="code-block">
+                                <span class="comment">// Add authentication in seconds</span><br/>
+                                <span class="keyword">const</span> auth = <span class="keyword">await</span> identity.<span class="keyword">authenticate</span>({<br/>
+                                &nbsp;&nbsp;clientId: <span class="string">"your-app"</span>,<br/>
+                                &nbsp;&nbsp;scopes: [<span class="string">"openid"</span>, <span class="string">"profile"</span>]<br/>
+                                });<br/><br/>
+                                <span class="comment">// Access user info</span><br/>
+                                <span class="keyword">const</span> user = auth.user;<br/>
+                                console.log(<span class="string">`Welcome, ${user.name}!`</span>);
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Trust Section -->
+<section class="trust-section">
+    <div class="container">
+        <div class="row g-4 justify-content-center">
+            <div class="col-auto">
+                <div class="trust-badge">
+                    <i class="bi bi-shield-check"></i>
+                    <span>SOC 2 Compliant</span>
+                </div>
+            </div>
+            <div class="col-auto">
+                <div class="trust-badge">
+                    <i class="bi bi-lock"></i>
+                    <span>256-bit Encryption</span>
+                </div>
+            </div>
+            <div class="col-auto">
+                <div class="trust-badge">
+                    <i class="bi bi-globe"></i>
+                    <span>99.9% Uptime SLA</span>
+                </div>
+            </div>
+            <div class="col-auto">
+                <div class="trust-badge">
+                    <i class="bi bi-patch-check"></i>
+                    <span>GDPR Ready</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="features-section" id="features">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="section-title">Everything You Need</h2>
+            <p class="section-subtitle">
+                A complete identity platform with all the features modern applications require.
+            </p>
+        </div>
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card">
+                    <div class="feature-icon bg-primary-subtle text-primary">
+                        <i class="bi bi-key"></i>
+                    </div>
+                    <h4>OAuth 2.0 & OIDC</h4>
+                    <p>Industry-standard protocols for secure authentication and authorization. Support for all grant types.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card">
+                    <div class="feature-icon bg-success-subtle text-success">
+                        <i class="bi bi-building"></i>
+                    </div>
+                    <h4>Multi-Tenant</h4>
+                    <p>Built for SaaS. Isolate data per organization while managing everything from a single dashboard.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card">
+                    <div class="feature-icon bg-info-subtle text-info">
+                        <i class="bi bi-people"></i>
+                    </div>
+                    <h4>User Management</h4>
+                    <p>Complete user lifecycle management with roles, permissions, and customizable profiles.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card">
+                    <div class="feature-icon bg-warning-subtle text-warning">
+                        <i class="bi bi-shield-lock"></i>
+                    </div>
+                    <h4>Security First</h4>
+                    <p>Password hashing with PBKDF2, brute-force protection, and comprehensive audit logging.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card">
+                    <div class="feature-icon bg-danger-subtle text-danger">
+                        <i class="bi bi-speedometer2"></i>
+                    </div>
+                    <h4>High Performance</h4>
+                    <p>Built on Orleans for distributed computing. Handles millions of authentications per second.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card">
+                    <div class="feature-icon bg-secondary-subtle text-secondary">
+                        <i class="bi bi-code-slash"></i>
+                    </div>
+                    <h4>Developer Friendly</h4>
+                    <p>Well-documented APIs, SDKs for popular frameworks, and quick-start guides to get you running fast.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- How it Works -->
+<section class="how-it-works-section">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="section-title">Get Started in Minutes</h2>
+            <p class="section-subtitle">
+                Three simple steps to add secure authentication to your application.
+            </p>
+        </div>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="step-card">
+                    <div class="step-number">1</div>
+                    <h4>Create Your Organization</h4>
+                    <p>Sign up and create your organization. Configure your settings and branding.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="step-card">
+                    <div class="step-number">2</div>
+                    <h4>Register Your App</h4>
+                    <p>Add your application, configure redirect URIs, and get your client credentials.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="step-card">
+                    <div class="step-number">3</div>
+                    <h4>Integrate & Launch</h4>
+                    <p>Use our SDKs or standard OAuth libraries to add authentication to your app.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Pricing Section -->
+<section class="pricing-section" id="pricing">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="section-title">Simple, Transparent Pricing</h2>
+            <p class="section-subtitle">
+                Start free, scale as you grow. No hidden fees, no surprises.
+            </p>
+        </div>
+        <div class="row g-4 justify-content-center">
+            <div class="col-lg-4">
+                <div class="pricing-card">
+                    <h3>Starter</h3>
+                    <div class="price">Free</div>
+                    <p class="description">Perfect for side projects and getting started</p>
+                    <ul>
+                        <li><i class="bi bi-check-circle-fill"></i> Up to 1,000 monthly active users</li>
+                        <li><i class="bi bi-check-circle-fill"></i> 1 organization</li>
+                        <li><i class="bi bi-check-circle-fill"></i> 3 applications</li>
+                        <li><i class="bi bi-check-circle-fill"></i> Community support</li>
+                        <li><i class="bi bi-check-circle-fill"></i> Standard authentication</li>
+                    </ul>
+                    <a asp-page="/Account/Register" class="btn btn-outline-primary w-100">Get Started</a>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="pricing-card featured">
+                    <h3>Professional</h3>
+                    <div class="price">$49<span>/month</span></div>
+                    <p class="description">For growing teams and production apps</p>
+                    <ul>
+                        <li><i class="bi bi-check-circle-fill"></i> Up to 10,000 monthly active users</li>
+                        <li><i class="bi bi-check-circle-fill"></i> Unlimited organizations</li>
+                        <li><i class="bi bi-check-circle-fill"></i> Unlimited applications</li>
+                        <li><i class="bi bi-check-circle-fill"></i> Email support</li>
+                        <li><i class="bi bi-check-circle-fill"></i> Custom branding</li>
+                        <li><i class="bi bi-check-circle-fill"></i> Advanced security features</li>
+                    </ul>
+                    <a asp-page="/Account/Register" class="btn btn-primary w-100">Start Free Trial</a>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="pricing-card">
+                    <h3>Enterprise</h3>
+                    <div class="price">Custom</div>
+                    <p class="description">For large organizations with custom needs</p>
+                    <ul>
+                        <li><i class="bi bi-check-circle-fill"></i> Unlimited everything</li>
+                        <li><i class="bi bi-check-circle-fill"></i> Dedicated support</li>
+                        <li><i class="bi bi-check-circle-fill"></i> SLA guarantees</li>
+                        <li><i class="bi bi-check-circle-fill"></i> Custom integrations</li>
+                        <li><i class="bi bi-check-circle-fill"></i> On-premise deployment option</li>
+                        <li><i class="bi bi-check-circle-fill"></i> Security review & compliance</li>
+                    </ul>
+                    <a href="#" class="btn btn-outline-primary w-100">Contact Sales</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Documentation Section -->
+<section class="features-section" id="docs">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="section-title">Developer Resources</h2>
+            <p class="section-subtitle">
+                Everything you need to integrate quickly and securely.
+            </p>
+        </div>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="feature-card text-center">
+                    <div class="feature-icon bg-primary-subtle text-primary mx-auto">
+                        <i class="bi bi-book"></i>
+                    </div>
+                    <h4>Documentation</h4>
+                    <p>Comprehensive guides covering authentication flows, API reference, and best practices.</p>
+                    <a href="#" class="btn btn-link">Read Docs <i class="bi bi-arrow-right"></i></a>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card text-center">
+                    <div class="feature-icon bg-success-subtle text-success mx-auto">
+                        <i class="bi bi-lightning"></i>
+                    </div>
+                    <h4>Quick Start Guides</h4>
+                    <p>Step-by-step tutorials for React, Angular, Vue, .NET, Node.js, and more.</p>
+                    <a href="#" class="btn btn-link">Get Started <i class="bi bi-arrow-right"></i></a>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card text-center">
+                    <div class="feature-icon bg-info-subtle text-info mx-auto">
+                        <i class="bi bi-github"></i>
+                    </div>
+                    <h4>Sample Projects</h4>
+                    <p>Ready-to-run sample applications demonstrating common integration patterns.</p>
+                    <a href="#" class="btn btn-link">View on GitHub <i class="bi bi-arrow-right"></i></a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="cta-section">
+    <div class="container text-center">
+        <h2>Ready to Get Started?</h2>
+        <p>Join thousands of developers who trust TGHarker Identity for their authentication needs.</p>
+        <div class="d-flex gap-3 justify-content-center flex-wrap">
+            <a asp-page="/Account/Register" class="btn btn-light btn-lg px-4">
+                Create Free Account
+            </a>
+            <a href="#" class="btn btn-outline-light btn-lg px-4">
+                Talk to Sales
+            </a>
+        </div>
+    </div>
+</section>

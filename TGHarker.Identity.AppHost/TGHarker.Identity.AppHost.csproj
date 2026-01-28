@@ -6,11 +6,13 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <UserSecretsId>34c5766e-f27f-4dea-8fea-f16f0b069202</UserSecretsId>
+    <AllowMissingPrunePackageData>true</AllowMissingPrunePackageData>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.Azure.Storage" Version="13.1.0" />
     <PackageReference Include="Aspire.Hosting.Orleans" Version="13.1.0" />
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" Version="13.1.0" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,0 +1,114 @@
+@page
+@using TGHarker.Identity.Abstractions.Models
+@model TGharker.Identity.Web.Pages.Dashboard.Roles.IndexModel
+@{
+    ViewData["Title"] = "Roles";
+}
+
+@section PageActions {
+    <a asp-page="./Create" class="btn btn-primary">
+        <i class="bi bi-plus-lg me-1"></i> New Role
+    </a>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="card dashboard-card">
+    <div class="card-body p-0">
+        @if (Model.Roles.Count == 0)
+        {
+            <div class="empty-state">
+                <i class="bi bi-shield-check"></i>
+                <h5>No roles yet</h5>
+                <p class="mb-0">Create custom roles to manage user permissions.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-dashboard table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Role</th>
+                            <th>Members</th>
+                            <th>Permissions</th>
+                            <th>Created</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var role in Model.Roles)
+                        {
+                            <tr class="cursor-pointer" onclick="window.location='@Url.Page("./Details", new { id = role.Id })'">
+                                <td>
+                                    <div class="fw-semibold">
+                                        @role.Name
+                                        @if (role.IsSystem)
+                                        {
+                                            <span class="badge bg-secondary ms-1">System</span>
+                                        }
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(role.Description))
+                                    {
+                                        <small class="text-muted">@role.Description</small>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark">@role.MemberCount</span>
+                                </td>
+                                <td>
+                                    @if (role.Permissions.Count == 0)
+                                    {
+                                        <small class="text-muted">No permissions</small>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var perm in role.Permissions.Take(3))
+                                        {
+                                            <span class="badge bg-light text-dark me-1">@perm.Split(':').Last()</span>
+                                        }
+                                        @if (role.Permissions.Count > 3)
+                                        {
+                                            <span class="badge bg-light text-dark">+@(role.Permissions.Count - 3)</span>
+                                        }
+                                    }
+                                </td>
+                                <td>
+                                    <small class="text-muted">@role.CreatedAt.ToString("MMM d, yyyy")</small>
+                                </td>
+                                <td class="text-end" onclick="event.stopPropagation()">
+                                    <a asp-page="./Details" asp-route-id="@role.Id" class="btn btn-sm btn-outline-secondary">
+                                        <i class="bi bi-chevron-right"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .cursor-pointer {
+        cursor: pointer;
+    }
+    .cursor-pointer:hover {
+        background-color: var(--bs-light);
+    }
+</style>

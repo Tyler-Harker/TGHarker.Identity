@@ -1,0 +1,28 @@
+@page
+@model TGharker.Identity.Web.Pages.Dashboard.ProfileModel
+@{
+    ViewData["Title"] = "Profile";
+}
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card dashboard-card">
+            <div class="card-header bg-transparent">
+                <h6 class="mb-0">Your Profile</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label text-muted small">Email</label>
+                    <p class="mb-0">@Model.Email</p>
+                </div>
+                @if (!string.IsNullOrEmpty(Model.GivenName) || !string.IsNullOrEmpty(Model.FamilyName))
+                {
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Name</label>
+                        <p class="mb-0">@Model.GivenName @Model.FamilyName</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

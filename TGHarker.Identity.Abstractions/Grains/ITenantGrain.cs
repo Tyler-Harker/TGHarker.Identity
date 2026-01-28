@@ -19,4 +19,16 @@ public interface ITenantGrain : IGrainWithStringKey
     Task AddMemberAsync(string userId);
     Task RemoveMemberAsync(string userId);
     Task<bool> ExistsAsync();
+
+    // Client/Application management
+    Task<IReadOnlyList<string>> GetClientIdsAsync();
+    Task AddClientAsync(string clientId);
+    Task RemoveClientAsync(string clientId);
+
+    // Role management
+    Task<IReadOnlyList<TenantRole>> GetRolesAsync();
+    Task<TenantRole?> GetRoleAsync(string roleId);
+    Task<TenantRole> CreateRoleAsync(string name, string? description, List<string> permissions);
+    Task<TenantRole?> UpdateRoleAsync(string roleId, string name, string? description, List<string> permissions);
+    Task<bool> DeleteRoleAsync(string roleId);
 }

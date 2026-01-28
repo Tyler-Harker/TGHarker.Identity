@@ -51,7 +51,7 @@ public sealed class TenantGrain : Grain, ITenantGrain
             };
         }
 
-        // Initialize tenant state
+        // Initialize tenant state with default system roles
         _state.State = new TenantState
         {
             Id = tenantId,
@@ -62,7 +62,8 @@ public sealed class TenantGrain : Grain, ITenantGrain
             Configuration = request.Configuration ?? new TenantConfiguration(),
             CreatedAt = DateTime.UtcNow,
             CreatedByUserId = request.CreatorUserId,
-            MemberUserIds = [request.CreatorUserId]
+            MemberUserIds = [request.CreatorUserId],
+            Roles = CreateDefaultRoles()
         };
 
         await _state.WriteStateAsync();
@@ -94,6 +95,59 @@ public sealed class TenantGrain : Grain, ITenantGrain
             Success = true,
             TenantId = tenantId
         };
+    }
+
+    private static List<TenantRole> CreateDefaultRoles()
+    {
+        var now = DateTime.UtcNow;
+        return
+        [
+            new TenantRole
+            {
+                Id = WellKnownRoles.TenantOwner,
+                Name = "Owner",
+                Description = "Full access to all tenant resources and settings",
+                IsSystem = true,
+                Permissions = WellKnownPermissions.All.Select(p => p.Permission).ToList(),
+                CreatedAt = now
+            },
+            new TenantRole
+            {
+                Id = WellKnownRoles.TenantAdmin,
+                Name = "Admin",
+                Description = "Administrative access to tenant resources",
+                IsSystem = true,
+                Permissions =
+                [
+                    WellKnownPermissions.TenantViewSettings,
+                    WellKnownPermissions.UsersView,
+                    WellKnownPermissions.UsersInvite,
+                    WellKnownPermissions.UsersRemove,
+                    WellKnownPermissions.UsersManageRoles,
+                    WellKnownPermissions.RolesView,
+                    WellKnownPermissions.ClientsView,
+                    WellKnownPermissions.ClientsCreate,
+                    WellKnownPermissions.ClientsEdit,
+                    WellKnownPermissions.ClientsDelete,
+                    WellKnownPermissions.ClientsManageSecrets
+                ],
+                CreatedAt = now
+            },
+            new TenantRole
+            {
+                Id = WellKnownRoles.User,
+                Name = "Member",
+                Description = "Basic member access",
+                IsSystem = true,
+                Permissions =
+                [
+                    WellKnownPermissions.UsersView,
+                    WellKnownPermissions.RolesView,
+                    WellKnownPermissions.ClientsView
+                ],
+                CreatedAt = now
+            }
+        ];
     }
 
     private async Task InitializeStandardScopesAsync(string tenantId)
@@ -231,5 +285,91 @@ public sealed class TenantGrain : Grain, ITenantGrain
     public Task<bool> ExistsAsync()
     {
         return Task.FromResult(!string.IsNullOrEmpty(_state.State.Id));
+    }
+
+    public Task<IReadOnlyList<string>> GetClientIdsAsync()
+    {
+        return Task.FromResult<IReadOnlyList<string>>(_state.State.ClientIds);
+    }
+
+    public async Task AddClientAsync(string clientId)
+    {
+        if (!_state.State.ClientIds.Contains(clientId))
+        {
+            _state.State.ClientIds.Add(clientId);
+            await _state.WriteStateAsync();
+        }
+    }
+
+    public async Task RemoveClientAsync(string clientId)
+    {
+        if (_state.State.ClientIds.Remove(clientId))
+        {
+            await _state.WriteStateAsync();
+        }
+    }
+
+    public async Task<IReadOnlyList<TenantRole>> GetRolesAsync()
+    {
+        // Ensure default roles exist for existing tenants
+        if (_state.State.Roles.Count == 0 && !string.IsNullOrEmpty(_state.State.Id))
+        {
+            _state.State.Roles = CreateDefaultRoles();
+            await _state.WriteStateAsync();
+        }
+
+        return _state.State.Roles;
+    }
+
+    public Task<TenantRole?> GetRoleAsync(string roleId)
+    {
+        var role = _state.State.Roles.FirstOrDefault(r => r.Id == roleId);
+        return Task.FromResult(role);
+    }
+
+    public async Task<TenantRole> CreateRoleAsync(string name, string? description, List<string> permissions)
+    {
+        var role = new TenantRole
+        {
+            Id = Guid.NewGuid().ToString(),
+            Name = name,
+            Description = description,
+            IsSystem = false,
+            Permissions = permissions,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _state.State.Roles.Add(role);
+        await _state.WriteStateAsync();
+
+        return role;
+    }
+
+    public async Task<TenantRole?> UpdateRoleAsync(string roleId, string name, string? description, List<string> permissions)
+    {
+        var role = _state.State.Roles.FirstOrDefault(r => r.Id == roleId);
+        if (role == null)
+            return null;
+
+        if (role.IsSystem)
+            return null; // Cannot modify system roles
+
+        role.Name = name;
+        role.Description = description;
+        role.Permissions = permissions;
+
+        await _state.WriteStateAsync();
+        return role;
+    }
+
+    public async Task<bool> DeleteRoleAsync(string roleId)
+    {
+        var role = _state.State.Roles.FirstOrDefault(r => r.Id == roleId);
+        if (role == null || role.IsSystem)
+            return false;
+
+        _state.State.Roles.Remove(role);
+        await _state.WriteStateAsync();
+        return true;
     }
 }

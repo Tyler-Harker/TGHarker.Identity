@@ -5,17 +5,23 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using TGHarker.Identity.Abstractions.Grains;
 using TGHarker.Identity.Abstractions.Models;
 using TGHarker.Identity.Abstractions.Requests;
+using TGharker.Identity.Web.Services;
 
 namespace TGharker.Identity.Web.Pages.Account;
 
 public class RegisterModel : PageModel
 {
     private readonly IClusterClient _clusterClient;
+    private readonly IGrainSearchService _searchService;
     private readonly ILogger<RegisterModel> _logger;
 
-    public RegisterModel(IClusterClient clusterClient, ILogger<RegisterModel> logger)
+    public RegisterModel(
+        IClusterClient clusterClient,
+        IGrainSearchService searchService,
+        ILogger<RegisterModel> logger)
     {
         _clusterClient = clusterClient;
+        _searchService = searchService;
         _logger = logger;
     }
 
@@ -73,16 +79,15 @@ public class RegisterModel : PageModel
             return Page();
         }
 
-        // Check if email already exists
-        var userRegistry = _clusterClient.GetGrain<IUserRegistryGrain>("user-registry");
-        if (await userRegistry.EmailExistsAsync(Input.Email.ToLowerInvariant()))
+        // Check if email already exists using search
+        if (await _searchService.EmailExistsAsync(Input.Email))
         {
             ErrorMessage = "An account with this email already exists.";
             return Page();
         }
 
         // Create user
-        var userId = Guid.NewGuid().ToString();
+        var userId = Guid.CreateVersion7().ToString();
         var userGrain = _clusterClient.GetGrain<IUserGrain>($"user-{userId}");
 
         var passwordHash = HashPassword(Input.Password);
@@ -106,11 +111,13 @@ public class RegisterModel : PageModel
         // If tenant is specified, add user to tenant
         if (!string.IsNullOrEmpty(TenantIdentifier))
         {
-            var tenantRegistry = _clusterClient.GetGrain<ITenantRegistryGrain>("tenant-registry");
-            var tenantId = await tenantRegistry.GetTenantIdByIdentifierAsync(TenantIdentifier);
+            var tenantGrain = await _searchService.GetTenantByIdentifierAsync(TenantIdentifier);
+            var tenantState = tenantGrain != null ? await tenantGrain.GetStateAsync() : null;
 
-            if (!string.IsNullOrEmpty(tenantId))
+            if (tenantState != null)
             {
+                var tenantId = tenantState.Id;
+
                 // Create membership with user role
                 var membershipGrain = _clusterClient.GetGrain<ITenantMembershipGrain>($"{tenantId}/member-{userId}");
                 await membershipGrain.CreateAsync(new CreateMembershipRequest
@@ -124,8 +131,7 @@ public class RegisterModel : PageModel
                 await userGrain.AddTenantMembershipAsync(tenantId);
 
                 // Add user to tenant's member list
-                var tenantGrain = _clusterClient.GetGrain<ITenantGrain>(tenantId);
-                await tenantGrain.AddMemberAsync(userId);
+                await tenantGrain!.AddMemberAsync(userId);
 
                 _logger.LogInformation("Added user {UserId} to tenant {TenantId}", userId, tenantId);
             }

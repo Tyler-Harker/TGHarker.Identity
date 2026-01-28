@@ -1,15 +1,14 @@
-using TGHarker.Identity.Abstractions.Grains;
 using TGHarker.Identity.Abstractions.Models;
 
 namespace TGharker.Identity.Web.Services;
 
 public sealed class TenantResolver : ITenantResolver
 {
-    private readonly IClusterClient _clusterClient;
+    private readonly IGrainSearchService _searchService;
 
-    public TenantResolver(IClusterClient clusterClient)
+    public TenantResolver(IGrainSearchService searchService)
     {
-        _clusterClient = clusterClient;
+        _searchService = searchService;
     }
 
     public async Task<TenantState?> ResolveAsync(HttpContext context)
@@ -18,15 +17,11 @@ public sealed class TenantResolver : ITenantResolver
         if (string.IsNullOrEmpty(identifier))
             return null;
 
-        // Get tenant ID from registry
-        var registry = _clusterClient.GetGrain<ITenantRegistryGrain>("tenant-registry");
-        var tenantId = await registry.GetTenantIdByIdentifierAsync(identifier);
-
-        if (string.IsNullOrEmpty(tenantId))
+        // Get tenant using search
+        var tenantGrain = await _searchService.GetTenantByIdentifierAsync(identifier);
+        if (tenantGrain == null)
             return null;
 
-        // Get tenant state
-        var tenantGrain = _clusterClient.GetGrain<ITenantGrain>(tenantId);
         return await tenantGrain.GetStateAsync();
     }
 

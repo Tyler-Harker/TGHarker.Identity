@@ -1,0 +1,53 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "cleanup-stale-processes",
+      "type": "shell",
+      "command": "pkill -f 'TGHarker.Identity' 2>/dev/null; pkill -f 'dcpctrl' 2>/dev/null; sleep 1; echo 'Cleanup complete'",
+      "presentation": {
+        "reveal": "silent",
+        "close": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "watch-apphost",
+      "type": "shell",
+      "command": "pkill -f 'TGHarker.Identity' 2>/dev/null; pkill -f 'dcpctrl' 2>/dev/null; sleep 1; dotnet watch run --project ${workspaceFolder}/TGHarker.Identity.AppHost/TGHarker.Identity.AppHost.csproj -- --launch-profile https",
+      "options": {
+        "env": {
+          "DOTNET_ENVIRONMENT": "Development",
+          "ASPNETCORE_ENVIRONMENT": "Development"
+        }
+      },
+      "problemMatcher": "$msCompile",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
+      "runOptions": {
+        "instanceLimit": 1
+      }
+    },
+    {
+      "label": "build-apphost",
+      "type": "process",
+      "command": "dotnet",
+      "args": [
+        "build",
+        "${workspaceFolder}/TGHarker.Identity.AppHost/TGHarker.Identity.AppHost.csproj",
+        "-c",
+        "Debug"
+      ],
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "cleanup-and-build",
+      "dependsOn": ["cleanup-stale-processes", "build-apphost"],
+      "dependsOrder": "sequence",
+      "problemMatcher": []
+    }
+  ]
+}

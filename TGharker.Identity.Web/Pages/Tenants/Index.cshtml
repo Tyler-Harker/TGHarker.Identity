@@ -1,0 +1,118 @@
+@page
+@model TGharker.Identity.Web.Pages.Tenants.IndexModel
+@{
+    ViewData["Title"] = "Your Tenants";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow">
+            <div class="card-body p-4">
+                <h2 class="card-title text-center mb-4">Your Tenants</h2>
+
+                @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+                {
+                    <div class="alert alert-danger" role="alert">
+                        @Model.ErrorMessage
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+                {
+                    <div class="alert alert-success" role="alert">
+                        @Model.SuccessMessage
+                    </div>
+                }
+
+                @if (Model.Tenants.Count > 0)
+                {
+                    <p class="text-muted mb-3">Select a tenant to continue:</p>
+                    <div class="list-group mb-4">
+                        @foreach (var tenant in Model.Tenants)
+                        {
+                            <form method="post" asp-page-handler="Select" class="d-inline">
+                                <input type="hidden" name="tenantId" value="@tenant.Id" />
+                                <input type="hidden" asp-for="ReturnUrl" />
+                                <button type="submit" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center w-100 text-start">
+                                    <div>
+                                        <h6 class="mb-1">@(tenant.DisplayName ?? tenant.Name)</h6>
+                                        <small class="text-muted">@tenant.Identifier</small>
+                                    </div>
+                                    <span class="badge bg-primary">Select</span>
+                                </button>
+                            </form>
+                        }
+                    </div>
+
+                    <hr class="my-4" />
+                    <p class="text-center text-muted mb-3">Or create a new tenant</p>
+                }
+                else
+                {
+                    <div class="alert alert-info" role="alert">
+                        <h5 class="alert-heading">Welcome!</h5>
+                        <p class="mb-0">You're not a member of any tenant yet. Create one below to get started.</p>
+                    </div>
+                }
+
+                <form method="post" asp-page-handler="Create">
+                    <input type="hidden" asp-for="ReturnUrl" />
+
+                    <div class="mb-3">
+                        <label asp-for="CreateInput.Name" class="form-label">Tenant Name</label>
+                        <input asp-for="CreateInput.Name" class="form-control" placeholder="Acme Corporation" />
+                        <span asp-validation-for="CreateInput.Name" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="CreateInput.Identifier" class="form-label">Identifier</label>
+                        <input asp-for="CreateInput.Identifier" class="form-control" placeholder="acme-corp" />
+                        <div class="form-text">URL-safe identifier (lowercase letters, numbers, and hyphens only)</div>
+                        <span asp-validation-for="CreateInput.Identifier" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="CreateInput.DisplayName" class="form-label">Display Name <span class="text-muted">(optional)</span></label>
+                        <input asp-for="CreateInput.DisplayName" class="form-control" placeholder="Acme Corp" />
+                        <span asp-validation-for="CreateInput.DisplayName" class="text-danger"></span>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-success">Create Tenant</button>
+                    </div>
+                </form>
+
+                <hr class="my-4" />
+
+                <div class="text-center">
+                    <a asp-page="/Account/Logout">Sign Out</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        // Auto-generate identifier from name
+        document.getElementById('CreateInput_Name').addEventListener('input', function() {
+            var identifierField = document.getElementById('CreateInput_Identifier');
+            if (!identifierField.dataset.userModified) {
+                var identifier = this.value
+                    .toLowerCase()
+                    .replace(/[^a-z0-9\s-]/g, '')
+                    .replace(/\s+/g, '-')
+                    .replace(/-+/g, '-')
+                    .replace(/^-|-$/g, '');
+                identifierField.value = identifier;
+            }
+        });
+
+        // Mark identifier as user-modified once user types in it
+        document.getElementById('CreateInput_Identifier').addEventListener('input', function() {
+            this.dataset.userModified = 'true';
+        });
+    </script>
+}

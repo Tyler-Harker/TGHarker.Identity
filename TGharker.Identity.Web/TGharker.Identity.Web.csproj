@@ -4,15 +4,21 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <AllowMissingPrunePackageData>true</AllowMissingPrunePackageData>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Aspire.Azure.Data.Tables" Version="13.1.0" />
+    <PackageReference Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" Version="13.1.0" />
     <PackageReference Include="Microsoft.Orleans.Client" Version="10.*" />
+    <PackageReference Include="Microsoft.Orleans.Clustering.AzureStorage" Version="10.*" />
     <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.*" />
     <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.*" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.*" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.*" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="7.*" />
+    <PackageReference Include="TGHarker.Orleans.Search" Version="1.0.7" />
+    <PackageReference Include="TGHarker.Orleans.Search.PostgreSQL" Version="1.0.7" />
   </ItemGroup>
 
   <ItemGroup>

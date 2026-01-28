@@ -44,11 +44,11 @@ public sealed class UserGrain : Grain, IUserGrain
         var grainKey = this.GetPrimaryKeyString();
         var userId = grainKey.StartsWith("user-") ? grainKey[5..] : grainKey;
 
-        // Register email in registry
-        var registry = _grainFactory.GetGrain<IUserRegistryGrain>("user-registry");
-        var registered = await registry.RegisterUserAsync(request.Email.ToLowerInvariant(), userId);
+        // Lock the email address to ensure uniqueness
+        var emailLock = _grainFactory.GetGrain<IUserEmailLockGrain>(request.Email.ToLowerInvariant());
+        var lockResult = await emailLock.TryLockAsync(userId);
 
-        if (!registered)
+        if (!lockResult.Success)
         {
             return new CreateUserResult
             {

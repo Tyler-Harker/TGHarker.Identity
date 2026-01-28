@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using TGHarker.Identity.Abstractions.Grains;
 using TGHarker.Identity.Abstractions.Models;
 using TGHarker.Identity.Abstractions.Requests;
+using TGharker.Identity.Web.Services;
 
 namespace TGharker.Identity.Web.Endpoints;
 
@@ -34,15 +35,15 @@ public static class TenantEndpoints
     private static async Task<IResult> CreateTenantAsync(
         HttpContext context,
         CreateTenantApiRequest request,
-        IClusterClient clusterClient)
+        IClusterClient clusterClient,
+        IGrainSearchService searchService)
     {
         var userId = context.User.FindFirst("sub")?.Value;
         if (string.IsNullOrEmpty(userId))
             return Results.Unauthorized();
 
-        // Check if tenant identifier already exists
-        var registry = clusterClient.GetGrain<ITenantRegistryGrain>("tenant-registry");
-        if (await registry.TenantExistsAsync(request.Identifier))
+        // Check if tenant identifier already exists using search
+        if (await searchService.TenantExistsAsync(request.Identifier))
         {
             return Results.Conflict(new { error = "tenant_exists", error_description = "Tenant identifier already in use" });
         }
@@ -75,17 +76,13 @@ public static class TenantEndpoints
 
     private static async Task<IResult> GetTenantAsync(
         string identifier,
-        IClusterClient clusterClient)
+        IGrainSearchService searchService)
     {
-        var registry = clusterClient.GetGrain<ITenantRegistryGrain>("tenant-registry");
-        var tenantId = await registry.GetTenantIdByIdentifierAsync(identifier);
-
-        if (string.IsNullOrEmpty(tenantId))
+        var tenantGrain = await searchService.GetTenantByIdentifierAsync(identifier);
+        if (tenantGrain == null)
             return Results.NotFound();
 
-        var tenantGrain = clusterClient.GetGrain<ITenantGrain>(tenantId);
         var state = await tenantGrain.GetStateAsync();
-
         if (state == null)
             return Results.NotFound();
 
@@ -103,20 +100,24 @@ public static class TenantEndpoints
         string identifier,
         AddMemberRequest request,
         HttpContext context,
-        IClusterClient clusterClient)
+        IClusterClient clusterClient,
+        IGrainSearchService searchService)
     {
         var currentUserId = context.User.FindFirst("sub")?.Value;
-        var currentTenantId = context.User.FindFirst("tenant_id")?.Value;
 
         if (string.IsNullOrEmpty(currentUserId))
             return Results.Unauthorized();
 
-        // Get tenant
-        var registry = clusterClient.GetGrain<ITenantRegistryGrain>("tenant-registry");
-        var tenantId = await registry.GetTenantIdByIdentifierAsync(identifier);
-
-        if (string.IsNullOrEmpty(tenantId))
+        // Get tenant using search
+        var tenantGrain = await searchService.GetTenantByIdentifierAsync(identifier);
+        if (tenantGrain == null)
             return Results.NotFound();
+
+        var tenantState = await tenantGrain.GetStateAsync();
+        if (tenantState == null)
+            return Results.NotFound();
+
+        var tenantId = tenantState.Id;
 
         // Check if current user is admin
         var currentMembershipGrain = clusterClient.GetGrain<ITenantMembershipGrain>($"{tenantId}/member-{currentUserId}");
@@ -126,12 +127,16 @@ public static class TenantEndpoints
         if (!isAdmin)
             return Results.Forbid();
 
-        // Get user by email
-        var userRegistry = clusterClient.GetGrain<IUserRegistryGrain>("user-registry");
-        var userId = await userRegistry.GetUserIdByEmailAsync(request.Email);
-
-        if (string.IsNullOrEmpty(userId))
+        // Get user by email using search
+        var userGrain = await searchService.GetUserByEmailAsync(request.Email);
+        if (userGrain == null)
             return Results.NotFound(new { error = "user_not_found" });
+
+        var userState = await userGrain.GetStateAsync();
+        if (userState == null)
+            return Results.NotFound(new { error = "user_not_found" });
+
+        var userId = userState.Id;
 
         // Check if already a member
         var membershipGrain = clusterClient.GetGrain<ITenantMembershipGrain>($"{tenantId}/member-{userId}");
@@ -147,11 +152,9 @@ public static class TenantEndpoints
         });
 
         // Add tenant to user's memberships
-        var userGrain = clusterClient.GetGrain<IUserGrain>($"user-{userId}");
         await userGrain.AddTenantMembershipAsync(tenantId);
 
         // Add user to tenant's member list
-        var tenantGrain = clusterClient.GetGrain<ITenantGrain>(tenantId);
         await tenantGrain.AddMemberAsync(userId);
 
         return Results.Created($"/api/tenants/{identifier}/members/{userId}", new { userId, tenantId });
@@ -161,19 +164,24 @@ public static class TenantEndpoints
         string identifier,
         CreateClientApiRequest request,
         HttpContext context,
-        IClusterClient clusterClient)
+        IClusterClient clusterClient,
+        IGrainSearchService searchService)
     {
         var currentUserId = context.User.FindFirst("sub")?.Value;
 
         if (string.IsNullOrEmpty(currentUserId))
             return Results.Unauthorized();
 
-        // Get tenant
-        var registry = clusterClient.GetGrain<ITenantRegistryGrain>("tenant-registry");
-        var tenantId = await registry.GetTenantIdByIdentifierAsync(identifier);
-
-        if (string.IsNullOrEmpty(tenantId))
+        // Get tenant using search
+        var tenantGrain = await searchService.GetTenantByIdentifierAsync(identifier);
+        if (tenantGrain == null)
             return Results.NotFound();
+
+        var tenantState = await tenantGrain.GetStateAsync();
+        if (tenantState == null)
+            return Results.NotFound();
+
+        var tenantId = tenantState.Id;
 
         // Check if current user is admin
         var membershipGrain = clusterClient.GetGrain<ITenantMembershipGrain>($"{tenantId}/member-{currentUserId}");

@@ -1,0 +1,113 @@
+@page
+@using TGHarker.Identity.Abstractions.Models
+@model TGharker.Identity.Web.Pages.Dashboard.Users.IndexModel
+@{
+    ViewData["Title"] = "Users";
+}
+
+@section PageActions {
+    <a asp-page="./Invite" class="btn btn-primary">
+        <i class="bi bi-person-plus me-1"></i> Add User
+    </a>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="card dashboard-card">
+    <div class="card-body p-0">
+        @if (Model.Users.Count == 0)
+        {
+            <div class="empty-state">
+                <i class="bi bi-people"></i>
+                <h5>No users yet</h5>
+                <p class="mb-0">Add users to your tenant to collaborate.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-dashboard table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Roles</th>
+                            <th>Joined</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var user in Model.Users)
+                        {
+                            <tr class="cursor-pointer" onclick="window.location='@Url.Page("./Details", new { id = user.UserId })'">
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="user-avatar me-3">
+                                            <i class="bi bi-person-circle fs-4 text-muted"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-semibold">
+                                                @(user.Name ?? user.Email)
+                                                @if (user.IsCurrentUser)
+                                                {
+                                                    <span class="badge bg-secondary ms-1">You</span>
+                                                }
+                                            </div>
+                                            @if (!string.IsNullOrEmpty(user.Name))
+                                            {
+                                                <small class="text-muted">@user.Email</small>
+                                            }
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    @foreach (var role in user.RoleInfos.Take(2))
+                                    {
+                                        var badgeClass = role.Id == WellKnownRoles.TenantOwner ? "bg-warning text-dark" :
+                                                         role.Id == WellKnownRoles.TenantAdmin ? "bg-primary" :
+                                                         role.IsSystem ? "bg-secondary" : "bg-info";
+                                        <span class="badge @badgeClass me-1">@role.Name</span>
+                                    }
+                                    @if (user.RoleInfos.Count > 2)
+                                    {
+                                        <span class="badge bg-light text-dark">+@(user.RoleInfos.Count - 2)</span>
+                                    }
+                                </td>
+                                <td>
+                                    <small class="text-muted">@user.JoinedAt.ToString("MMM d, yyyy")</small>
+                                </td>
+                                <td class="text-end" onclick="event.stopPropagation()">
+                                    <a asp-page="./Details" asp-route-id="@user.UserId" class="btn btn-sm btn-outline-secondary">
+                                        <i class="bi bi-chevron-right"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .cursor-pointer {
+        cursor: pointer;
+    }
+    .cursor-pointer:hover {
+        background-color: var(--bs-light);
+    }
+</style>

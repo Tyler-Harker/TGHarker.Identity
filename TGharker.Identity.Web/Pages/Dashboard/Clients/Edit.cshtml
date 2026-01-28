@@ -1,0 +1,159 @@
+@page "{id}"
+@model TGharker.Identity.Web.Pages.Dashboard.Clients.EditModel
+@{
+    ViewData["Title"] = $"Edit {Model.Input.ClientName}";
+}
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-page="./Index">Applications</a></li>
+        <li class="breadcrumb-item"><a asp-page="./Details" asp-route-id="@Model.ClientId">@Model.Input.ClientName</a></li>
+        <li class="breadcrumb-item active">Edit</li>
+    </ol>
+</nav>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @Model.ErrorMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card dashboard-card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Edit Application</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" asp-route-id="@Model.ClientId">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Client ID</label>
+                        <input type="text" class="form-control font-monospace" value="@Model.ClientId" readonly disabled />
+                        <div class="form-text">Client ID cannot be changed after creation.</div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label asp-for="Input.ClientName" class="form-label">Application Name <span class="text-danger">*</span></label>
+                            <input asp-for="Input.ClientName" class="form-control" />
+                            <span asp-validation-for="Input.ClientName" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small">Client Type</label>
+                            <div class="form-control-plaintext">
+                                @if (Model.IsConfidential)
+                                {
+                                    <span class="badge bg-primary">Confidential</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">Public</span>
+                                }
+                                <span class="text-muted small ms-2">Cannot be changed</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Input.Description" class="form-label">Description</label>
+                        <textarea asp-for="Input.Description" class="form-control" rows="2"></textarea>
+                        <span asp-validation-for="Input.Description" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Input.RedirectUris" class="form-label">Redirect URIs</label>
+                        <textarea asp-for="Input.RedirectUris" class="form-control font-monospace" rows="3" placeholder="https://myapp.com/callback&#10;https://localhost:3000/callback"></textarea>
+                        <div class="form-text">Enter one URI per line. Users will be redirected here after authentication.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Allowed Scopes</label>
+                        <div class="row">
+                            @foreach (var scope in Model.AvailableScopes)
+                            {
+                                <div class="col-md-4 col-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox"
+                                               name="Input.AllowedScopes"
+                                               value="@scope"
+                                               id="scope_@scope"
+                                               @(Model.Input.AllowedScopes.Contains(scope) ? "checked" : "") />
+                                        <label class="form-check-label" for="scope_@scope">@scope</label>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Security Settings</label>
+                        <div class="form-check">
+                            <input asp-for="Input.RequirePkce" class="form-check-input" />
+                            <label asp-for="Input.RequirePkce" class="form-check-label">
+                                Require PKCE
+                            </label>
+                            <div class="form-text">Proof Key for Code Exchange adds an extra layer of security.</div>
+                        </div>
+                        <div class="form-check mt-2">
+                            <input asp-for="Input.RequireConsent" class="form-check-input" />
+                            <label asp-for="Input.RequireConsent" class="form-check-label">
+                                Require Consent
+                            </label>
+                            <div class="form-text">Users must approve access to their data before authentication completes.</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="Input.CorsOrigins" class="form-label">CORS Origins</label>
+                        <textarea asp-for="Input.CorsOrigins" class="form-control font-monospace" rows="2" placeholder="https://myapp.com&#10;https://localhost:3000"></textarea>
+                        <div class="form-text">Enter one origin per line. Required for browser-based applications.</div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i> Save Changes
+                        </button>
+                        <a asp-page="./Details" asp-route-id="@Model.ClientId" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card dashboard-card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="bi bi-info-circle me-2"></i>About Scopes</h5>
+            </div>
+            <div class="card-body">
+                <dl class="small mb-0">
+                    <dt>openid</dt>
+                    <dd class="text-muted">Required for OpenID Connect. Returns user's unique identifier.</dd>
+
+                    <dt>profile</dt>
+                    <dd class="text-muted">Access to basic profile info (name, picture, etc.)</dd>
+
+                    <dt>email</dt>
+                    <dd class="text-muted">Access to user's email address.</dd>
+
+                    <dt>phone</dt>
+                    <dd class="text-muted">Access to user's phone number.</dd>
+
+                    <dt>address</dt>
+                    <dd class="text-muted">Access to user's address information.</dd>
+
+                    <dt>offline_access</dt>
+                    <dd class="text-muted mb-0">Allows refresh tokens for long-lived sessions.</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

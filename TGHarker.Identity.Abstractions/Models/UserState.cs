@@ -1,10 +1,18 @@
+using TGHarker.Identity.Abstractions.Grains;
+using TGHarker.Orleans.Search.Abstractions.Attributes;
+
 namespace TGHarker.Identity.Abstractions.Models;
 
 [GenerateSerializer]
+[Searchable(typeof(IUserGrain))]
 public sealed class UserState
 {
     [Id(0)] public string Id { get; set; } = string.Empty;
-    [Id(1)] public string Email { get; set; } = string.Empty;
+
+    [Id(1)]
+    [Queryable(Indexed = true)]
+    public string Email { get; set; } = string.Empty;
+
     [Id(2)] public bool EmailVerified { get; set; }
     [Id(3)] public string PasswordHash { get; set; } = string.Empty;
     [Id(4)] public string? GivenName { get; set; }
@@ -12,7 +20,11 @@ public sealed class UserState
     [Id(6)] public string? PhoneNumber { get; set; }
     [Id(7)] public bool PhoneNumberVerified { get; set; }
     [Id(8)] public string? Picture { get; set; }
-    [Id(9)] public bool IsActive { get; set; }
+
+    [Id(9)]
+    [Queryable]
+    public bool IsActive { get; set; }
+
     [Id(10)] public bool IsLocked { get; set; }
     [Id(11)] public DateTime? LockoutEnd { get; set; }
     [Id(12)] public int FailedLoginAttempts { get; set; }

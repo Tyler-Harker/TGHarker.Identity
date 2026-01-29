@@ -20,6 +20,8 @@ public class DetailsModel : PageModel
 
     public ClientState Client { get; set; } = default!;
     public string? NewClientSecret { get; set; }
+    public string Authority { get; set; } = string.Empty;
+    public string TenantIdentifier { get; set; } = string.Empty;
 
     private string GetTenantId() => User.FindFirst("tenant_id")?.Value
         ?? throw new InvalidOperationException("No tenant in session");
@@ -43,6 +45,11 @@ public class DetailsModel : PageModel
         }
 
         Client = client;
+
+        // Set authority URL for documentation
+        var request = HttpContext.Request;
+        TenantIdentifier = User.FindFirst("tenant_identifier")?.Value ?? string.Empty;
+        Authority = $"{request.Scheme}://{request.Host}";
 
         // Check for new client secret from TempData
         if (TempData["NewClientSecret"] is string secret)

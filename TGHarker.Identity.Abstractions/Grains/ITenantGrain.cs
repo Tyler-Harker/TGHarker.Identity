@@ -12,6 +12,7 @@ public interface ITenantGrain : IGrainWithStringKey
     Task<TenantState?> GetStateAsync();
     Task<CreateTenantResult> InitializeAsync(CreateTenantRequest request);
     Task UpdateConfigurationAsync(TenantConfiguration config);
+    Task UpdateBrandingAsync(TenantBranding branding);
     Task<bool> IsActiveAsync();
     Task DeactivateAsync();
     Task ActivateAsync();

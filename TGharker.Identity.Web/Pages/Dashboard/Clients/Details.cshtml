@@ -243,6 +243,274 @@
                 </dl>
             </div>
         </div>
+
+        <!-- Quick Start Guide -->
+        <div class="card dashboard-card mt-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-book me-2"></i>Quick Start Guide
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="accordion accordion-flush" id="setupGuide">
+                    <!-- Endpoints -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed px-0" type="button" data-bs-toggle="collapse" data-bs-target="#endpointsSection">
+                                <strong>1. Endpoints</strong>
+                            </button>
+                        </h2>
+                        <div id="endpointsSection" class="accordion-collapse collapse" data-bs-parent="#setupGuide">
+                            <div class="accordion-body px-0 pb-0">
+                                <p class="small text-muted">Use these endpoints to integrate with your application:</p>
+                                <dl class="small mb-0">
+                                    <dt>Discovery</dt>
+                                    <dd><code class="user-select-all">/.well-known/openid-configuration</code></dd>
+                                    <dt>Authorization</dt>
+                                    <dd><code class="user-select-all">/connect/authorize</code></dd>
+                                    <dt>Token</dt>
+                                    <dd><code class="user-select-all">/connect/token</code></dd>
+                                    <dt>User Info</dt>
+                                    <dd><code class="user-select-all">/connect/userinfo</code></dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Code Examples with Framework Tabs -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed px-0" type="button" data-bs-toggle="collapse" data-bs-target="#codeExample">
+                                <strong>2. Code Example</strong>
+                            </button>
+                        </h2>
+                        <div id="codeExample" class="accordion-collapse collapse" data-bs-parent="#setupGuide">
+                            <div class="accordion-body px-0 pb-0">
+                                <ul class="nav nav-tabs nav-tabs-sm mb-3" id="frameworkTabs" role="tablist">
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link active" id="react-tab" data-bs-toggle="tab" data-bs-target="#react-panel" type="button" role="tab">React</button>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link" id="angular-tab" data-bs-toggle="tab" data-bs-target="#angular-panel" type="button" role="tab">Angular</button>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link" id="dotnet-tab" data-bs-toggle="tab" data-bs-target="#dotnet-panel" type="button" role="tab">.NET</button>
+                                    </li>
+                                </ul>
+
+                                <div class="tab-content" id="frameworkTabsContent">
+                                    <!-- React -->
+                                    <div class="tab-pane fade show active" id="react-panel" role="tabpanel">
+                                        <p class="small text-muted mb-2">Install the oidc-client-ts package:</p>
+                                        <pre class="code-block mb-2"><code>npm install oidc-client-ts</code></pre>
+                                        <p class="small text-muted mb-2">Configure the auth service:</p>
+                                        <pre class="code-block mb-0"><code><span class="keyword">import</span> { <span class="type">UserManager</span> } <span class="keyword">from</span> <span class="string">'oidc-client-ts'</span>;
+
+<span class="keyword">const</span> <span class="property">userManager</span> = <span class="keyword">new</span> <span class="type">UserManager</span>({
+  <span class="property">authority</span>: <span class="string">'@Model.Authority'</span>,
+  <span class="property">client_id</span>: <span class="string">'@Model.Client.ClientId'</span>,
+  <span class="property">redirect_uri</span>: <span class="string">'@(Model.Client.RedirectUris.FirstOrDefault() ?? "http://localhost:3000/callback")'</span>,
+  <span class="property">post_logout_redirect_uri</span>: <span class="string">'@(Model.Client.PostLogoutRedirectUris.FirstOrDefault() ?? "http://localhost:3000")'</span>,
+  <span class="property">response_type</span>: <span class="string">'code'</span>,
+  <span class="property">scope</span>: <span class="string">'@string.Join(" ", Model.Client.AllowedScopes)'</span>,
+  <span class="comment">// Multi-tenant: pass tenant identifier</span>
+  <span class="property">extraQueryParams</span>: { <span class="property">tenant</span>: <span class="string">'@Model.TenantIdentifier'</span> },@(Model.Client.IsConfidential ? "" : @"
+  <span class=""property"">automaticSilentRenew</span>: <span class=""keyword"">true</span>,")
+});
+
+<span class="comment">// Login</span>
+<span class="keyword">export const</span> <span class="function">login</span> = () => userManager.<span class="function">signinRedirect</span>();
+
+<span class="comment">// Handle callback</span>
+<span class="keyword">export const</span> <span class="function">handleCallback</span> = () => userManager.<span class="function">signinRedirectCallback</span>();
+
+<span class="comment">// Get user</span>
+<span class="keyword">export const</span> <span class="function">getUser</span> = () => userManager.<span class="function">getUser</span>();
+
+<span class="comment">// Logout</span>
+<span class="keyword">export const</span> <span class="function">logout</span> = () => userManager.<span class="function">signoutRedirect</span>();</code></pre>
+                                    </div>
+
+                                    <!-- Angular -->
+                                    <div class="tab-pane fade" id="angular-panel" role="tabpanel">
+                                        <p class="small text-muted mb-2">Install angular-auth-oidc-client:</p>
+                                        <pre class="code-block mb-2"><code>npm install angular-auth-oidc-client</code></pre>
+                                        <p class="small text-muted mb-2">Configure in app.config.ts:</p>
+                                        <pre class="code-block mb-0"><code><span class="keyword">import</span> { <span class="function">provideAuth</span> } <span class="keyword">from</span> <span class="string">'angular-auth-oidc-client'</span>;
+
+<span class="keyword">export const</span> <span class="property">appConfig</span> = {
+  <span class="property">providers</span>: [
+    <span class="function">provideAuth</span>({
+      <span class="property">config</span>: {
+        <span class="property">authority</span>: <span class="string">'@Model.Authority'</span>,
+        <span class="property">redirectUrl</span>: <span class="string">'@(Model.Client.RedirectUris.FirstOrDefault() ?? "http://localhost:4200/callback")'</span>,
+        <span class="property">postLogoutRedirectUri</span>: <span class="string">'@(Model.Client.PostLogoutRedirectUris.FirstOrDefault() ?? "http://localhost:4200")'</span>,
+        <span class="property">clientId</span>: <span class="string">'@Model.Client.ClientId'</span>,
+        <span class="property">scope</span>: <span class="string">'@string.Join(" ", Model.Client.AllowedScopes)'</span>,
+        <span class="property">responseType</span>: <span class="string">'code'</span>,
+        <span class="property">silentRenew</span>: <span class="keyword">true</span>,
+        <span class="property">useRefreshToken</span>: <span class="keyword">true</span>,
+        <span class="comment">// Multi-tenant: pass tenant identifier</span>
+        <span class="property">customParamsAuthRequest</span>: { <span class="property">tenant</span>: <span class="string">'@Model.TenantIdentifier'</span> },
+      }
+    })
+  ]
+};
+
+<span class="comment">// In your component:</span>
+<span class="keyword">import</span> { <span class="type">OidcSecurityService</span> } <span class="keyword">from</span> <span class="string">'angular-auth-oidc-client'</span>;
+
+<span class="keyword">export class</span> <span class="type">AppComponent</span> {
+  <span class="function">constructor</span>(<span class="keyword">private</span> <span class="property">oidc</span>: <span class="type">OidcSecurityService</span>) {}
+
+  <span class="function">login</span>() { <span class="keyword">this</span>.oidc.<span class="function">authorize</span>(); }
+  <span class="function">logout</span>() { <span class="keyword">this</span>.oidc.<span class="function">logoff</span>(); }
+}</code></pre>
+                                    </div>
+
+                                    <!-- .NET -->
+                                    <div class="tab-pane fade" id="dotnet-panel" role="tabpanel">
+                                        @if (Model.Client.IsConfidential)
+                                        {
+                                            <p class="small text-muted mb-2">Add to your Program.cs:</p>
+                                            <pre class="code-block mb-0"><code><span class="property">builder</span>.<span class="property">Services</span>.<span class="function">AddAuthentication</span>(<span class="property">options</span> =>
+{
+    <span class="property">options</span>.<span class="property">DefaultScheme</span> = <span class="string">"Cookies"</span>;
+    <span class="property">options</span>.<span class="property">DefaultChallengeScheme</span> = <span class="string">"OpenIdConnect"</span>;
+})
+.<span class="function">AddCookie</span>(<span class="string">"Cookies"</span>)
+.<span class="function">AddOpenIdConnect</span>(<span class="string">"OpenIdConnect"</span>, <span class="property">options</span> =>
+{
+    <span class="property">options</span>.<span class="property">Authority</span> = <span class="string">"@Model.Authority"</span>;
+    <span class="property">options</span>.<span class="property">ClientId</span> = <span class="string">"@Model.Client.ClientId"</span>;
+    <span class="property">options</span>.<span class="property">ClientSecret</span> = <span class="string">"YOUR_CLIENT_SECRET"</span>;
+    <span class="property">options</span>.<span class="property">ResponseType</span> = <span class="string">"code"</span>;
+    <span class="property">options</span>.<span class="property">SaveTokens</span> = <span class="keyword">true</span>;
+    <span class="property">options</span>.<span class="property">GetClaimsFromUserInfoEndpoint</span> = <span class="keyword">true</span>;
+    <span class="comment">// Add your scopes: @string.Join(", ", Model.Client.AllowedScopes)</span>
+    <span class="property">options</span>.<span class="property">Scope</span>.<span class="function">Add</span>(<span class="string">"openid"</span>);
+    <span class="property">options</span>.<span class="property">Scope</span>.<span class="function">Add</span>(<span class="string">"profile"</span>);
+    <span class="comment">// Multi-tenant: pass tenant identifier</span>
+    <span class="property">options</span>.<span class="property">Events</span>.<span class="property">OnRedirectToIdentityProvider</span> = <span class="property">ctx</span> =>
+    {
+        <span class="property">ctx</span>.<span class="property">ProtocolMessage</span>.<span class="function">SetParameter</span>(<span class="string">"tenant"</span>, <span class="string">"@Model.TenantIdentifier"</span>);
+        <span class="keyword">return</span> <span class="type">Task</span>.<span class="property">CompletedTask</span>;
+    };
+});
+
+<span class="property">app</span>.<span class="function">UseAuthentication</span>();
+<span class="property">app</span>.<span class="function">UseAuthorization</span>();
+
+<span class="comment">// Protect a controller or endpoint:</span>
+[<span class="type">Authorize</span>]
+<span class="keyword">public class</span> <span class="type">SecureController</span> : <span class="type">Controller</span> { }</code></pre>
+                                        }
+                                        else
+                                        {
+                                            <p class="small text-muted mb-2">For Blazor WebAssembly, add to Program.cs:</p>
+                                            <pre class="code-block mb-0"><code><span class="property">builder</span>.<span class="property">Services</span>.<span class="function">AddOidcAuthentication</span>(<span class="property">options</span> =>
+{
+    <span class="property">options</span>.<span class="property">ProviderOptions</span>.<span class="property">Authority</span> = <span class="string">"@Model.Authority"</span>;
+    <span class="property">options</span>.<span class="property">ProviderOptions</span>.<span class="property">ClientId</span> = <span class="string">"@Model.Client.ClientId"</span>;
+    <span class="property">options</span>.<span class="property">ProviderOptions</span>.<span class="property">ResponseType</span> = <span class="string">"code"</span>;
+    <span class="comment">// Add your scopes: @string.Join(", ", Model.Client.AllowedScopes)</span>
+    <span class="property">options</span>.<span class="property">ProviderOptions</span>.<span class="property">DefaultScopes</span>.<span class="function">Add</span>(<span class="string">"openid"</span>);
+    <span class="property">options</span>.<span class="property">ProviderOptions</span>.<span class="property">DefaultScopes</span>.<span class="function">Add</span>(<span class="string">"profile"</span>);
+    <span class="comment">// Multi-tenant: pass tenant identifier</span>
+    <span class="property">options</span>.<span class="property">ProviderOptions</span>.<span class="property">AdditionalProviderParameters</span>.<span class="function">Add</span>(<span class="string">"tenant"</span>, <span class="string">"@Model.TenantIdentifier"</span>);
+});
+
+<span class="comment">// In your component:</span>
+<span class="keyword">@@inject</span> <span class="type">NavigationManager</span> Navigation
+<span class="keyword">@@inject</span> <span class="type">SignOutSessionStateManager</span> SignOut
+
+<span class="keyword">&lt;AuthorizeView&gt;</span>
+    <span class="keyword">&lt;Authorized&gt;</span>
+        Hello, <span class="keyword">@@context</span>.User.Identity?.Name!
+        &lt;button <span class="keyword">@@onclick</span>=<span class="string">"Logout"</span>&gt;Logout&lt;/button&gt;
+    <span class="keyword">&lt;/Authorized&gt;</span>
+    <span class="keyword">&lt;NotAuthorized&gt;</span>
+        &lt;a href=<span class="string">"authentication/login"</span>&gt;Login&lt;/a&gt;
+    <span class="keyword">&lt;/NotAuthorized&gt;</span>
+<span class="keyword">&lt;/AuthorizeView&gt;</span></code></pre>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Configuration Checklist -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed px-0" type="button" data-bs-toggle="collapse" data-bs-target="#checklist">
+                                <strong>3. Setup Checklist</strong>
+                            </button>
+                        </h2>
+                        <div id="checklist" class="accordion-collapse collapse" data-bs-parent="#setupGuide">
+                            <div class="accordion-body px-0 pb-0">
+                                <ul class="list-unstyled small mb-0">
+                                    <li class="mb-2">
+                                        @if (Model.Client.RedirectUris.Count > 0)
+                                        {
+                                            <i class="bi bi-check-circle-fill text-success me-1"></i>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-circle text-muted me-1"></i>
+                                        }
+                                        Add your redirect URI(s)
+                                    </li>
+                                    @if (!Model.Client.IsConfidential)
+                                    {
+                                        <li class="mb-2">
+                                            @if (Model.Client.CorsOrigins.Count > 0)
+                                            {
+                                                <i class="bi bi-check-circle-fill text-success me-1"></i>
+                                            }
+                                            else
+                                            {
+                                                <i class="bi bi-circle text-muted me-1"></i>
+                                            }
+                                            Configure CORS origins for your domain
+                                        </li>
+                                    }
+                                    <li class="mb-2">
+                                        @if (Model.Client.AllowedScopes.Count > 0)
+                                        {
+                                            <i class="bi bi-check-circle-fill text-success me-1"></i>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-circle text-muted me-1"></i>
+                                        }
+                                        Select the scopes your app needs
+                                    </li>
+                                    @if (Model.Client.IsConfidential)
+                                    {
+                                        <li class="mb-2">
+                                            @if (Model.Client.Secrets.Count > 0)
+                                            {
+                                                <i class="bi bi-check-circle-fill text-success me-1"></i>
+                                            }
+                                            else
+                                            {
+                                                <i class="bi bi-circle text-muted me-1"></i>
+                                            }
+                                            Store your client secret securely
+                                        </li>
+                                    }
+                                    <li>
+                                        <i class="bi bi-circle text-muted me-1"></i>
+                                        Test the authentication flow
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 

@@ -249,6 +249,12 @@ public sealed class TenantGrain : Grain, ITenantGrain
         await _state.WriteStateAsync();
     }
 
+    public async Task UpdateBrandingAsync(TenantBranding branding)
+    {
+        _state.State.Configuration.Branding = branding;
+        await _state.WriteStateAsync();
+    }
+
     public Task<bool> IsActiveAsync()
     {
         return Task.FromResult(_state.State.IsActive);

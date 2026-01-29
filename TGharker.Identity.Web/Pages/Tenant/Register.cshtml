@@ -1,0 +1,76 @@
+@page "/Tenant/{tenantId}/Register"
+@model TGharker.Identity.Web.Pages.Tenant.RegisterModel
+@{
+    ViewData["Title"] = "Create Account";
+}
+
+@if (Model.Invitation != null)
+{
+    <div class="alert alert-info mb-4" role="alert">
+        <i class="bi bi-envelope-check me-2"></i>
+        You've been invited to join <strong>@Model.TenantDisplayName</strong>.
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-danger" role="alert">
+        <i class="bi bi-exclamation-triangle me-2"></i>@Model.ErrorMessage
+    </div>
+}
+
+<form method="post">
+    <input type="hidden" asp-for="TenantId" />
+    <input type="hidden" asp-for="ReturnUrl" />
+    <input type="hidden" asp-for="InviteToken" />
+
+    <div class="row">
+        <div class="col-6 mb-3">
+            <label asp-for="Input.GivenName" class="form-label">First Name</label>
+            <input asp-for="Input.GivenName" class="form-control" placeholder="John" autofocus />
+            <span asp-validation-for="Input.GivenName" class="text-danger small"></span>
+        </div>
+        <div class="col-6 mb-3">
+            <label asp-for="Input.FamilyName" class="form-label">Last Name</label>
+            <input asp-for="Input.FamilyName" class="form-control" placeholder="Doe" />
+            <span asp-validation-for="Input.FamilyName" class="text-danger small"></span>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Input.Email" class="form-label">Email address</label>
+        <input asp-for="Input.Email" class="form-control" type="email" placeholder="name@example.com" autocomplete="email"
+               readonly="@(Model.Invitation != null)" />
+        <span asp-validation-for="Input.Email" class="text-danger small"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Input.Password" class="form-label">Password</label>
+        <input asp-for="Input.Password" class="form-control" type="password" autocomplete="new-password" />
+        <span asp-validation-for="Input.Password" class="text-danger small"></span>
+        <div class="form-text">At least 12 characters with uppercase, lowercase, number, and special character.</div>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Input.ConfirmPassword" class="form-label">Confirm Password</label>
+        <input asp-for="Input.ConfirmPassword" class="form-control" type="password" autocomplete="new-password" />
+        <span asp-validation-for="Input.ConfirmPassword" class="text-danger small"></span>
+    </div>
+
+    <div class="d-grid mb-3">
+        <button type="submit" class="btn btn-tenant-primary btn-lg">Create Account</button>
+    </div>
+
+    <hr class="my-4" />
+
+    <div class="text-center">
+        <span class="text-muted small">Already have an account?</span>
+        <a asp-page="/Tenant/Login" asp-route-tenantId="@Model.TenantId" asp-route-returnUrl="@Model.ReturnUrl" class="link-tenant small">
+            Sign in
+        </a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

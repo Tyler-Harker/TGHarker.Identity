@@ -103,9 +103,9 @@ public static class AuthorizeEndpoint
 
         if (string.IsNullOrEmpty(userId) || userTenantId != tenant.Id)
         {
-            // Redirect to login
+            // Redirect to tenant-specific login
             var returnUrl = context.Request.Path + context.Request.QueryString;
-            var loginUrl = $"/Account/Login?returnUrl={HttpUtility.UrlEncode(returnUrl)}&tenant={tenant.Identifier}";
+            var loginUrl = $"/Tenant/{tenant.Identifier}/Login?returnUrl={HttpUtility.UrlEncode(returnUrl)}";
             return Results.Redirect(loginUrl);
         }
 

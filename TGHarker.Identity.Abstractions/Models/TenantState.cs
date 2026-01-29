@@ -41,4 +41,5 @@ public sealed class TenantConfiguration
     [Id(3)] public bool RequirePkce { get; set; } = true;
     [Id(4)] public int MaxLoginAttemptsPerMinute { get; set; } = 5;
     [Id(5)] public int IdTokenLifetimeMinutes { get; set; } = 60;
+    [Id(6)] public TenantBranding Branding { get; set; } = new();
 }

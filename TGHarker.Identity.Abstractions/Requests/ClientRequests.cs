@@ -1,3 +1,5 @@
+using TGHarker.Identity.Abstractions.Models;
+
 namespace TGHarker.Identity.Abstractions.Requests;
 
 [GenerateSerializer]
@@ -15,6 +17,7 @@ public sealed class CreateClientRequest
     [Id(9)] public List<string> AllowedGrantTypes { get; set; } = [];
     [Id(10)] public List<string> CorsOrigins { get; set; } = [];
     [Id(11)] public List<string> PostLogoutRedirectUris { get; set; } = [];
+    [Id(12)] public UserFlowSettings? UserFlow { get; set; }
 }
 
 [GenerateSerializer]
@@ -31,6 +34,7 @@ public sealed class UpdateClientRequest
     [Id(8)] public int? AccessTokenLifetimeMinutes { get; set; }
     [Id(9)] public int? RefreshTokenLifetimeDays { get; set; }
     [Id(10)] public List<string>? PostLogoutRedirectUris { get; set; }
+    [Id(11)] public UserFlowSettings? UserFlow { get; set; }
 }
 
 [GenerateSerializer]

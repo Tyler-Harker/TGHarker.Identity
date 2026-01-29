@@ -57,6 +57,8 @@ builder.Services.AddScoped<IClientAuthenticationService, ClientAuthenticationSer
 builder.Services.AddScoped<ITenantResolver, TenantResolver>();
 builder.Services.AddScoped<ISessionService, SessionService>();
 builder.Services.AddScoped<IGrainSearchService, GrainSearchService>();
+builder.Services.AddScoped<IUserFlowService, UserFlowService>();
+builder.Services.AddScoped<IOrganizationCreationService, OrganizationCreationService>();
 
 // Authentication - support both cookies (for Razor Pages) and JWT Bearer (for API)
 builder.Services.AddAuthentication(options =>

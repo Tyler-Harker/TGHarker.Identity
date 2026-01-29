@@ -11,14 +11,20 @@ namespace TGharker.Identity.Web.Pages.Tenant;
 public class RegisterModel : TenantAuthPageModel
 {
     private readonly IGrainSearchService _searchService;
+    private readonly IUserFlowService _userFlowService;
+    private readonly IOrganizationCreationService _organizationCreationService;
 
     public RegisterModel(
         IClusterClient clusterClient,
         IGrainSearchService searchService,
+        IUserFlowService userFlowService,
+        IOrganizationCreationService organizationCreationService,
         ILogger<RegisterModel> logger)
         : base(clusterClient, logger)
     {
         _searchService = searchService;
+        _userFlowService = userFlowService;
+        _organizationCreationService = organizationCreationService;
     }
 
     [BindProperty]
@@ -31,6 +37,9 @@ public class RegisterModel : TenantAuthPageModel
 
     // Invitation info for display
     public InvitationState? Invitation { get; set; }
+
+    // UserFlow settings from the client application
+    public UserFlowSettings? UserFlow { get; set; }
 
     public class InputModel
     {
@@ -55,6 +64,17 @@ public class RegisterModel : TenantAuthPageModel
         [Display(Name = "Confirm password")]
         [Compare("Password", ErrorMessage = "Passwords do not match.")]
         public string ConfirmPassword { get; set; } = string.Empty;
+
+        // Organization fields (used when UserFlow has organization prompts)
+        [Display(Name = "Organization Name")]
+        [StringLength(100, ErrorMessage = "Organization name must be less than 100 characters.")]
+        public string? OrganizationName { get; set; }
+
+        [Display(Name = "Organization Identifier")]
+        [RegularExpression(@"^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$",
+            ErrorMessage = "Identifier must be lowercase, contain only letters, numbers, and hyphens")]
+        [StringLength(50, ErrorMessage = "Organization identifier must be less than 50 characters.")]
+        public string? OrganizationIdentifier { get; set; }
     }
 
     public async Task<IActionResult> OnGetAsync()
@@ -65,8 +85,18 @@ public class RegisterModel : TenantAuthPageModel
         }
 
         await LoadInvitationAsync();
+        await LoadUserFlowAsync();
 
         return Page();
+    }
+
+    private async Task LoadUserFlowAsync()
+    {
+        if (Tenant == null)
+            return;
+
+        // Try to resolve UserFlow from the return URL (which contains client_id in OAuth flow)
+        UserFlow = await _userFlowService.ResolveUserFlowFromReturnUrlAsync(Tenant.Id, ReturnUrl);
     }
 
     private async Task LoadInvitationAsync()
@@ -104,6 +134,7 @@ public class RegisterModel : TenantAuthPageModel
         }
 
         await LoadInvitationAsync();
+        await LoadUserFlowAsync();
 
         if (!ModelState.IsValid)
         {
@@ -114,6 +145,16 @@ public class RegisterModel : TenantAuthPageModel
         if (!ValidatePasswordComplexity(Input.Password))
         {
             ErrorMessage = "Password must contain uppercase, lowercase, number, and special character.";
+            return Page();
+        }
+
+        // Validate organization fields based on UserFlow settings
+        if (UserFlow?.OrganizationsEnabled == true &&
+            UserFlow.OrganizationMode == OrganizationRegistrationMode.Prompt &&
+            UserFlow.RequireOrganizationName &&
+            string.IsNullOrWhiteSpace(Input.OrganizationName))
+        {
+            ErrorMessage = $"{UserFlow.OrganizationNameLabel ?? "Organization name"} is required.";
             return Page();
         }
 
@@ -192,6 +233,34 @@ public class RegisterModel : TenantAuthPageModel
             await tenantGrain.AddMemberAsync(userId);
 
             Logger.LogInformation("Added user {UserId} to tenant {TenantId}", userId, Tenant.Id);
+        }
+
+        // Handle organization creation based on UserFlow settings
+        if (UserFlow?.OrganizationsEnabled == true &&
+            UserFlow.OrganizationMode != OrganizationRegistrationMode.None)
+        {
+            var orgResult = await _organizationCreationService.CreateOrganizationForUserAsync(
+                Tenant!.Id,
+                userId,
+                Input.Email,
+                Input.GivenName,
+                Input.OrganizationName,
+                Input.OrganizationIdentifier,
+                UserFlow);
+
+            if (orgResult.Success && orgResult.OrganizationId != null)
+            {
+                Logger.LogInformation(
+                    "Created organization {OrganizationId} for user {UserId} during registration",
+                    orgResult.OrganizationId, userId);
+            }
+            else if (!orgResult.Success && UserFlow.OrganizationMode == OrganizationRegistrationMode.Prompt)
+            {
+                // For required prompts, log warning but don't fail registration
+                Logger.LogWarning(
+                    "Failed to create organization for user {UserId}: {Error}",
+                    userId, orgResult.Error);
+            }
         }
 
         // Redirect to tenant login

@@ -44,6 +44,21 @@ public class EditModel : PageModel
         public bool RequireConsent { get; set; } = true;
 
         public string CorsOrigins { get; set; } = string.Empty;
+
+        // UserFlow Settings
+        public bool OrganizationsEnabled { get; set; }
+        public OrganizationRegistrationMode OrganizationMode { get; set; }
+        public string? DefaultOrganizationRole { get; set; }
+        public bool RequireOrganizationName { get; set; } = true;
+
+        [StringLength(50)]
+        public string? OrganizationNameLabel { get; set; }
+
+        [StringLength(100)]
+        public string? OrganizationNamePlaceholder { get; set; }
+
+        [StringLength(200)]
+        public string? OrganizationHelpText { get; set; }
     }
 
     public List<string> AvailableScopes { get; } = ["openid", "profile", "email", "phone", "address", "offline_access"];
@@ -72,6 +87,8 @@ public class EditModel : PageModel
         ClientId = id;
         IsConfidential = client.IsConfidential;
 
+        var userFlow = client.UserFlow ?? new UserFlowSettings();
+
         Input = new InputModel
         {
             ClientName = client.ClientName ?? string.Empty,
@@ -80,7 +97,15 @@ public class EditModel : PageModel
             AllowedScopes = client.AllowedScopes.ToList(),
             RequirePkce = client.RequirePkce,
             RequireConsent = client.RequireConsent,
-            CorsOrigins = string.Join("\n", client.CorsOrigins)
+            CorsOrigins = string.Join("\n", client.CorsOrigins),
+            // UserFlow settings
+            OrganizationsEnabled = userFlow.OrganizationsEnabled,
+            OrganizationMode = userFlow.OrganizationMode,
+            DefaultOrganizationRole = userFlow.DefaultOrganizationRole,
+            RequireOrganizationName = userFlow.RequireOrganizationName,
+            OrganizationNameLabel = userFlow.OrganizationNameLabel,
+            OrganizationNamePlaceholder = userFlow.OrganizationNamePlaceholder,
+            OrganizationHelpText = userFlow.OrganizationHelpText
         };
 
         return Page();
@@ -124,6 +149,18 @@ public class EditModel : PageModel
                 .Where(o => !string.IsNullOrEmpty(o))
                 .ToList();
 
+            // Build UserFlow settings
+            var userFlow = new UserFlowSettings
+            {
+                OrganizationsEnabled = Input.OrganizationsEnabled,
+                OrganizationMode = Input.OrganizationMode,
+                DefaultOrganizationRole = Input.DefaultOrganizationRole,
+                RequireOrganizationName = Input.RequireOrganizationName,
+                OrganizationNameLabel = Input.OrganizationNameLabel?.Trim(),
+                OrganizationNamePlaceholder = Input.OrganizationNamePlaceholder?.Trim(),
+                OrganizationHelpText = Input.OrganizationHelpText?.Trim()
+            };
+
             // Update client
             var updateRequest = new UpdateClientRequest
             {
@@ -133,7 +170,8 @@ public class EditModel : PageModel
                 AllowedScopes = Input.AllowedScopes ?? [],
                 RequirePkce = Input.RequirePkce,
                 RequireConsent = Input.RequireConsent,
-                CorsOrigins = corsOrigins
+                CorsOrigins = corsOrigins,
+                UserFlow = userFlow
             };
 
             await clientGrain.UpdateAsync(updateRequest);

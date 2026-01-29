@@ -1,5 +1,6 @@
 @page "/Tenant/{tenantId}/Register"
 @model TGharker.Identity.Web.Pages.Tenant.RegisterModel
+@using TGHarker.Identity.Abstractions.Models
 @{
     ViewData["Title"] = "Create Account";
 }
@@ -56,6 +57,49 @@
         <input asp-for="Input.ConfirmPassword" class="form-control" type="password" autocomplete="new-password" />
         <span asp-validation-for="Input.ConfirmPassword" class="text-danger small"></span>
     </div>
+
+    @if (Model.UserFlow?.OrganizationsEnabled == true &&
+         (Model.UserFlow.OrganizationMode == OrganizationRegistrationMode.Prompt ||
+          Model.UserFlow.OrganizationMode == OrganizationRegistrationMode.OptionalPrompt))
+    {
+        <hr class="my-4" />
+        <h6 class="mb-3">
+            <i class="bi bi-building me-2"></i>@(Model.UserFlow.OrganizationNameLabel ?? "Organization")
+        </h6>
+
+        <div class="mb-3">
+            <label asp-for="Input.OrganizationName" class="form-label">
+                @(Model.UserFlow.OrganizationNameLabel ?? "Organization Name")
+                @if (Model.UserFlow.OrganizationMode == OrganizationRegistrationMode.Prompt &&
+                     Model.UserFlow.RequireOrganizationName)
+                {
+                    <span class="text-danger">*</span>
+                }
+            </label>
+            <input asp-for="Input.OrganizationName" class="form-control"
+                   placeholder="@(Model.UserFlow.OrganizationNamePlaceholder ?? "Acme Inc.")" />
+            <span asp-validation-for="Input.OrganizationName" class="text-danger small"></span>
+            @if (!string.IsNullOrEmpty(Model.UserFlow.OrganizationHelpText))
+            {
+                <div class="form-text">@Model.UserFlow.OrganizationHelpText</div>
+            }
+            else if (Model.UserFlow.OrganizationMode == OrganizationRegistrationMode.OptionalPrompt)
+            {
+                <div class="form-text">Optional - leave blank to skip organization creation.</div>
+            }
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Input.OrganizationIdentifier" class="form-label">
+                Organization Identifier
+                <span class="text-muted">(optional)</span>
+            </label>
+            <input asp-for="Input.OrganizationIdentifier" class="form-control"
+                   placeholder="acme-inc" />
+            <span asp-validation-for="Input.OrganizationIdentifier" class="text-danger small"></span>
+            <div class="form-text">A URL-friendly identifier. If not provided, one will be generated from the name.</div>
+        </div>
+    }
 
     <div class="d-grid mb-3">
         <button type="submit" class="btn btn-tenant-primary btn-lg">Create Account</button>

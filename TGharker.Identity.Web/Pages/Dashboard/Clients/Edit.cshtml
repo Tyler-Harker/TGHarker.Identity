@@ -1,5 +1,6 @@
 @page "{id}"
 @model TGharker.Identity.Web.Pages.Dashboard.Clients.EditModel
+@using TGHarker.Identity.Abstractions.Models
 @{
     ViewData["Title"] = $"Edit {Model.Input.ClientName}";
 }
@@ -113,6 +114,65 @@
                         <div class="form-text">Enter one origin per line. Required for browser-based applications.</div>
                     </div>
 
+                    <hr class="my-4" />
+
+                    <h6 class="mb-3"><i class="bi bi-diagram-3 me-2"></i>User Registration Flow</h6>
+
+                    <div class="form-check form-switch mb-3">
+                        <input asp-for="Input.OrganizationsEnabled" class="form-check-input" id="orgEnabled" />
+                        <label asp-for="Input.OrganizationsEnabled" class="form-check-label">
+                            Enable Organizations
+                        </label>
+                        <div class="form-text">Allow users to create or join organizations during registration.</div>
+                    </div>
+
+                    <div id="orgSettings" style="@(Model.Input.OrganizationsEnabled ? "" : "display: none;")">
+                        <div class="mb-3">
+                            <label asp-for="Input.OrganizationMode" class="form-label">Organization Mode</label>
+                            <select asp-for="Input.OrganizationMode" class="form-select">
+                                <option value="@OrganizationRegistrationMode.None">None - Don't create organizations</option>
+                                <option value="@OrganizationRegistrationMode.AutoCreate">Auto Create - Create organization automatically</option>
+                                <option value="@OrganizationRegistrationMode.Prompt">Prompt - Ask user for organization details</option>
+                                <option value="@OrganizationRegistrationMode.OptionalPrompt">Optional Prompt - Let user optionally create organization</option>
+                            </select>
+                            <div class="form-text">How organizations are handled during user registration.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Input.DefaultOrganizationRole" class="form-label">Default Organization Role</label>
+                            <select asp-for="Input.DefaultOrganizationRole" class="form-select">
+                                <option value="@WellKnownOrganizationRoles.Owner">Owner - Full control</option>
+                                <option value="@WellKnownOrganizationRoles.Admin">Admin - Administrative access</option>
+                                <option value="@WellKnownOrganizationRoles.Member">Member - Standard member</option>
+                            </select>
+                            <div class="form-text">Role assigned to the user in their new organization.</div>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input asp-for="Input.RequireOrganizationName" class="form-check-input" />
+                            <label asp-for="Input.RequireOrganizationName" class="form-check-label">
+                                Require Organization Name
+                            </label>
+                            <div class="form-text">Only applies to Prompt mode.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Input.OrganizationNameLabel" class="form-label">Organization Field Label</label>
+                            <input asp-for="Input.OrganizationNameLabel" class="form-control" placeholder="e.g., Company Name, Team Name" />
+                            <div class="form-text">Custom label for the organization name field.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Input.OrganizationNamePlaceholder" class="form-label">Placeholder Text</label>
+                            <input asp-for="Input.OrganizationNamePlaceholder" class="form-control" placeholder="e.g., Acme Inc." />
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Input.OrganizationHelpText" class="form-label">Help Text</label>
+                            <input asp-for="Input.OrganizationHelpText" class="form-control" placeholder="Optional help text shown below the field" />
+                        </div>
+                    </div>
+
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-check-lg me-1"></i> Save Changes
@@ -156,4 +216,9 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.getElementById('orgEnabled').addEventListener('change', function() {
+            document.getElementById('orgSettings').style.display = this.checked ? 'block' : 'none';
+        });
+    </script>
 }

@@ -23,4 +23,5 @@ public interface IClientGrain : IGrainWithStringKey
     Task ActivateAsync();
     Task DeactivateAsync();
     Task<bool> ExistsAsync();
+    Task<UserFlowSettings> GetUserFlowSettingsAsync();
 }

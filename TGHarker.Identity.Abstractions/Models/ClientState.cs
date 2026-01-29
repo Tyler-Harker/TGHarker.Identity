@@ -33,6 +33,7 @@ public sealed class ClientState
     [Id(16)] public int? IdTokenLifetimeMinutes { get; set; }
     [Id(17)] public DateTime CreatedAt { get; set; }
     [Id(18)] public List<string> PostLogoutRedirectUris { get; set; } = [];
+    [Id(19)] public UserFlowSettings UserFlow { get; set; } = new();
 }
 
 [GenerateSerializer]

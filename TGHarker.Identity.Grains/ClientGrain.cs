@@ -51,7 +51,8 @@ public sealed class ClientGrain : Grain, IClientGrain
             AllowedGrantTypes = request.AllowedGrantTypes.ToList(),
             CorsOrigins = request.CorsOrigins.ToList(),
             PostLogoutRedirectUris = request.PostLogoutRedirectUris.ToList(),
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            UserFlow = request.UserFlow ?? new UserFlowSettings()
         };
 
         string? plainTextSecret = null;
@@ -114,6 +115,9 @@ public sealed class ClientGrain : Grain, IClientGrain
 
         if (request.PostLogoutRedirectUris != null)
             _state.State.PostLogoutRedirectUris = request.PostLogoutRedirectUris.ToList();
+
+        if (request.UserFlow != null)
+            _state.State.UserFlow = request.UserFlow;
 
         await _state.WriteStateAsync();
     }
@@ -217,6 +221,11 @@ public sealed class ClientGrain : Grain, IClientGrain
     public Task<bool> ExistsAsync()
     {
         return Task.FromResult(!string.IsNullOrEmpty(_state.State.Id));
+    }
+
+    public Task<UserFlowSettings> GetUserFlowSettingsAsync()
+    {
+        return Task.FromResult(_state.State.UserFlow ?? new UserFlowSettings());
     }
 
     private static string GenerateClientSecret()

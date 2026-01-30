@@ -117,10 +117,14 @@ stages:
           - script: dotnet restore
             displayName: 'Restore NuGet Packages'
 
+          - script: dotnet build TGHarker.Identity.Silo/TGHarker.Identity.Silo.csproj --no-restore
+            displayName: 'Build Silo Project'
+
           - script: |
               dotnet ef database update \
                 --project TGHarker.Identity.Silo/TGHarker.Identity.Silo.csproj \
-                --startup-project TGHarker.Identity.Silo/TGHarker.Identity.Silo.csproj
+                --startup-project TGHarker.Identity.Silo/TGHarker.Identity.Silo.csproj \
+                --no-build
             displayName: 'Apply Migrations'
             env:
               CONNECTION_STRING: $(POSTGRES_CONNECTION_STRING)

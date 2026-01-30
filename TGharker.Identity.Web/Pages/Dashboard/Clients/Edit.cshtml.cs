@@ -36,14 +36,16 @@ public class EditModel : PageModel
         [StringLength(500)]
         public string? Description { get; set; }
 
-        public string RedirectUris { get; set; } = string.Empty;
+        public List<string> RedirectUris { get; set; } = [];
 
         public List<string> AllowedScopes { get; set; } = [];
 
         public bool RequirePkce { get; set; } = true;
         public bool RequireConsent { get; set; } = true;
 
-        public string CorsOrigins { get; set; } = string.Empty;
+        public List<string> CorsOrigins { get; set; } = [];
+
+        public List<string> PostLogoutRedirectUris { get; set; } = [];
 
         // UserFlow Settings
         public bool OrganizationsEnabled { get; set; }
@@ -93,11 +95,12 @@ public class EditModel : PageModel
         {
             ClientName = client.ClientName ?? string.Empty,
             Description = client.Description,
-            RedirectUris = string.Join("\n", client.RedirectUris),
+            RedirectUris = client.RedirectUris.ToList(),
             AllowedScopes = client.AllowedScopes.ToList(),
             RequirePkce = client.RequirePkce,
             RequireConsent = client.RequireConsent,
-            CorsOrigins = string.Join("\n", client.CorsOrigins),
+            CorsOrigins = client.CorsOrigins.ToList(),
+            PostLogoutRedirectUris = client.PostLogoutRedirectUris.ToList(),
             // UserFlow settings
             OrganizationsEnabled = userFlow.OrganizationsEnabled,
             OrganizationMode = userFlow.OrganizationMode,
@@ -135,18 +138,20 @@ public class EditModel : PageModel
 
             IsConfidential = client.IsConfidential;
 
-            // Parse redirect URIs (one per line)
+            // Filter out empty values
             var redirectUris = Input.RedirectUris
-                .Split('\n', StringSplitOptions.RemoveEmptyEntries)
-                .Select(u => u.Trim())
+                .Select(u => u?.Trim() ?? "")
                 .Where(u => !string.IsNullOrEmpty(u))
                 .ToList();
 
-            // Parse CORS origins (one per line)
             var corsOrigins = Input.CorsOrigins
-                .Split('\n', StringSplitOptions.RemoveEmptyEntries)
-                .Select(o => o.Trim())
+                .Select(o => o?.Trim() ?? "")
                 .Where(o => !string.IsNullOrEmpty(o))
+                .ToList();
+
+            var postLogoutRedirectUris = Input.PostLogoutRedirectUris
+                .Select(u => u?.Trim() ?? "")
+                .Where(u => !string.IsNullOrEmpty(u))
                 .ToList();
 
             // Build UserFlow settings
@@ -171,6 +176,7 @@ public class EditModel : PageModel
                 RequirePkce = Input.RequirePkce,
                 RequireConsent = Input.RequireConsent,
                 CorsOrigins = corsOrigins,
+                PostLogoutRedirectUris = postLogoutRedirectUris,
                 UserFlow = userFlow
             };
 

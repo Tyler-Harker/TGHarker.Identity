@@ -59,6 +59,7 @@ builder.Services.AddScoped<ISessionService, SessionService>();
 builder.Services.AddScoped<IGrainSearchService, GrainSearchService>();
 builder.Services.AddScoped<IUserFlowService, UserFlowService>();
 builder.Services.AddScoped<IOrganizationCreationService, OrganizationCreationService>();
+builder.Services.AddSingleton<IOAuthCorsService, OAuthCorsService>();
 builder.Services.AddMemoryCache();
 
 // Authentication - support both cookies (for Razor Pages) and JWT Bearer (for API)
@@ -113,6 +114,9 @@ else
 
 app.UseHttpsRedirection();
 app.UseRouting();
+
+// Handle CORS for OAuth2/OIDC endpoints
+app.UseOAuthCors();
 
 app.UseAuthentication();
 app.UseAuthorization();

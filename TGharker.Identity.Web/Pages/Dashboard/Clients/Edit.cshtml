@@ -66,9 +66,21 @@
                     </div>
 
                     <div class="mb-3">
-                        <label asp-for="Input.RedirectUris" class="form-label">Redirect URIs</label>
-                        <textarea asp-for="Input.RedirectUris" class="form-control font-monospace" rows="3" placeholder="https://myapp.com/callback&#10;https://localhost:3000/callback"></textarea>
-                        <div class="form-text">Enter one URI per line. Users will be redirected here after authentication.</div>
+                        <label class="form-label">Redirect URIs</label>
+                        <div id="redirectUrisList" class="uri-list" data-name="Input.RedirectUris" data-placeholder="https://myapp.com/callback">
+                            @foreach (var uri in Model.Input.RedirectUris.Where(u => !string.IsNullOrEmpty(u)))
+                            {
+                                <div class="input-group mb-2 uri-row">
+                                    <input type="text" name="Input.RedirectUris" class="form-control font-monospace uri-input" value="@uri" placeholder="https://myapp.com/callback" />
+                                    <button type="button" class="btn btn-outline-danger remove-uri" title="Remove"><i class="bi bi-x-lg"></i></button>
+                                </div>
+                            }
+                            <div class="input-group mb-2 uri-row">
+                                <input type="text" name="Input.RedirectUris" class="form-control font-monospace uri-input" placeholder="https://myapp.com/callback" />
+                                <button type="button" class="btn btn-outline-danger remove-uri invisible" title="Remove"><i class="bi bi-x-lg"></i></button>
+                            </div>
+                        </div>
+                        <div class="form-text">Users will be redirected here after authentication.</div>
                     </div>
 
                     <div class="mb-3">
@@ -108,10 +120,40 @@
                         </div>
                     </div>
 
+                    <div class="mb-3">
+                        <label class="form-label">Post Logout Redirect URIs</label>
+                        <div id="postLogoutUrisList" class="uri-list" data-name="Input.PostLogoutRedirectUris" data-placeholder="https://myapp.com">
+                            @foreach (var uri in Model.Input.PostLogoutRedirectUris.Where(u => !string.IsNullOrEmpty(u)))
+                            {
+                                <div class="input-group mb-2 uri-row">
+                                    <input type="text" name="Input.PostLogoutRedirectUris" class="form-control font-monospace uri-input" value="@uri" placeholder="https://myapp.com" />
+                                    <button type="button" class="btn btn-outline-danger remove-uri" title="Remove"><i class="bi bi-x-lg"></i></button>
+                                </div>
+                            }
+                            <div class="input-group mb-2 uri-row">
+                                <input type="text" name="Input.PostLogoutRedirectUris" class="form-control font-monospace uri-input" placeholder="https://myapp.com" />
+                                <button type="button" class="btn btn-outline-danger remove-uri invisible" title="Remove"><i class="bi bi-x-lg"></i></button>
+                            </div>
+                        </div>
+                        <div class="form-text">Users will be redirected here after logout.</div>
+                    </div>
+
                     <div class="mb-4">
-                        <label asp-for="Input.CorsOrigins" class="form-label">CORS Origins</label>
-                        <textarea asp-for="Input.CorsOrigins" class="form-control font-monospace" rows="2" placeholder="https://myapp.com&#10;https://localhost:3000"></textarea>
-                        <div class="form-text">Enter one origin per line. Required for browser-based applications.</div>
+                        <label class="form-label">CORS Origins</label>
+                        <div id="corsOriginsList" class="uri-list" data-name="Input.CorsOrigins" data-placeholder="https://myapp.com">
+                            @foreach (var origin in Model.Input.CorsOrigins.Where(o => !string.IsNullOrEmpty(o)))
+                            {
+                                <div class="input-group mb-2 uri-row">
+                                    <input type="text" name="Input.CorsOrigins" class="form-control font-monospace uri-input" value="@origin" placeholder="https://myapp.com" />
+                                    <button type="button" class="btn btn-outline-danger remove-uri" title="Remove"><i class="bi bi-x-lg"></i></button>
+                                </div>
+                            }
+                            <div class="input-group mb-2 uri-row">
+                                <input type="text" name="Input.CorsOrigins" class="form-control font-monospace uri-input" placeholder="https://myapp.com" />
+                                <button type="button" class="btn btn-outline-danger remove-uri invisible" title="Remove"><i class="bi bi-x-lg"></i></button>
+                            </div>
+                        </div>
+                        <div class="form-text">Required for browser-based applications making API calls.</div>
                     </div>
 
                     <hr class="my-4" />
@@ -219,6 +261,69 @@
     <script>
         document.getElementById('orgEnabled').addEventListener('change', function() {
             document.getElementById('orgSettings').style.display = this.checked ? 'block' : 'none';
+        });
+
+        // Dynamic URI list handling
+        document.querySelectorAll('.uri-list').forEach(function(list) {
+            const name = list.dataset.name;
+            const placeholder = list.dataset.placeholder;
+
+            function updateRemoveButtons() {
+                const rows = list.querySelectorAll('.uri-row');
+                rows.forEach(function(row, index) {
+                    const btn = row.querySelector('.remove-uri');
+                    const input = row.querySelector('.uri-input');
+                    // Show remove button if not the last row, or if it has a value
+                    if (index < rows.length - 1) {
+                        btn.classList.remove('invisible');
+                    } else {
+                        btn.classList.add('invisible');
+                    }
+                });
+            }
+
+            function addNewRow() {
+                const newRow = document.createElement('div');
+                newRow.className = 'input-group mb-2 uri-row';
+                newRow.innerHTML = `
+                    <input type="text" name="${name}" class="form-control font-monospace uri-input" placeholder="${placeholder}" />
+                    <button type="button" class="btn btn-outline-danger remove-uri invisible" title="Remove"><i class="bi bi-x-lg"></i></button>
+                `;
+                list.appendChild(newRow);
+                attachEventListeners(newRow);
+                updateRemoveButtons();
+            }
+
+            function attachEventListeners(row) {
+                const input = row.querySelector('.uri-input');
+                const removeBtn = row.querySelector('.remove-uri');
+
+                input.addEventListener('input', function() {
+                    const rows = list.querySelectorAll('.uri-row');
+                    const lastRow = rows[rows.length - 1];
+                    const lastInput = lastRow.querySelector('.uri-input');
+
+                    // If user typed in the last row, add a new empty row
+                    if (this === lastInput && this.value.trim() !== '') {
+                        addNewRow();
+                    }
+                    updateRemoveButtons();
+                });
+
+                removeBtn.addEventListener('click', function() {
+                    row.remove();
+                    updateRemoveButtons();
+                    // Ensure there's always at least one empty row
+                    const rows = list.querySelectorAll('.uri-row');
+                    if (rows.length === 0) {
+                        addNewRow();
+                    }
+                });
+            }
+
+            // Attach to existing rows
+            list.querySelectorAll('.uri-row').forEach(attachEventListeners);
+            updateRemoveButtons();
         });
     </script>
 }

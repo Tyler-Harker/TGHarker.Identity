@@ -74,6 +74,12 @@ public sealed class ClientGrain : Grain, IClientGrain
 
         await _state.WriteStateAsync();
 
+        // Invalidate CORS cache if origins were configured
+        if (request.CorsOrigins.Count > 0)
+        {
+            await InvalidateCorsCacheAsync();
+        }
+
         return new CreateClientResult
         {
             Success = true,
@@ -83,6 +89,7 @@ public sealed class ClientGrain : Grain, IClientGrain
 
     public async Task UpdateAsync(UpdateClientRequest request)
     {
+        var corsOriginsChanged = request.CorsOrigins != null;
         if (request.ClientName != null)
             _state.State.ClientName = request.ClientName;
 
@@ -120,6 +127,12 @@ public sealed class ClientGrain : Grain, IClientGrain
             _state.State.UserFlow = request.UserFlow;
 
         await _state.WriteStateAsync();
+
+        // Invalidate CORS cache if origins changed
+        if (corsOriginsChanged)
+        {
+            await InvalidateCorsCacheAsync();
+        }
     }
 
     public Task<bool> ValidateSecretAsync(string secret)
@@ -210,12 +223,24 @@ public sealed class ClientGrain : Grain, IClientGrain
     {
         _state.State.IsActive = true;
         await _state.WriteStateAsync();
+
+        // Invalidate CORS cache since client is now active
+        if (_state.State.CorsOrigins.Count > 0)
+        {
+            await InvalidateCorsCacheAsync();
+        }
     }
 
     public async Task DeactivateAsync()
     {
         _state.State.IsActive = false;
         await _state.WriteStateAsync();
+
+        // Invalidate CORS cache since client is now inactive
+        if (_state.State.CorsOrigins.Count > 0)
+        {
+            await InvalidateCorsCacheAsync();
+        }
     }
 
     public Task<bool> ExistsAsync()
@@ -241,5 +266,11 @@ public sealed class ClientGrain : Grain, IClientGrain
     {
         var hash = SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(secret));
         return Convert.ToBase64String(hash);
+    }
+
+    private async Task InvalidateCorsCacheAsync()
+    {
+        var corsGrain = GrainFactory.GetGrain<ICorsOriginsGrain>($"{_state.State.TenantId}/cors-origins");
+        await corsGrain.InvalidateAsync();
     }
 }

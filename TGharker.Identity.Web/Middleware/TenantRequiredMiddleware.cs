@@ -17,6 +17,7 @@ public class TenantRequiredMiddleware
         "/account/forgotpassword",
         "/account/resetpassword",
         "/account/confirmemail",
+        "/admin",  // SuperAdmin area root
         "/health",
         "/alive",
         "/ready"
@@ -26,6 +27,7 @@ public class TenantRequiredMiddleware
     [
         "/tenants/",
         "/tenant/",  // Tenant-specific auth pages
+        "/admin/",   // SuperAdmin area (separate auth)
         "/docs/",    // Public documentation pages
         "/.well-known/",
         "/connect/",

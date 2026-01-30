@@ -30,12 +30,21 @@ var silo = builder.AddProject<Projects.TGHarker_Identity_Silo>("identity-silo")
 var customDomain = builder.AddParameter("customDomain", value: "identity.harker.dev", publishValueAsDefault: true);
 var certificateName = builder.AddParameter("certificateName", value: "identity.harker.dev-envnizco-260128040623", publishValueAsDefault: true);
 
+// SuperAdmin credentials (secret in production, default for dev)
+var devSuperAdminPassword = "SuperAdmin123!";
+var superAdminUsername = builder.AddParameter("superAdminUsername", value: "admin", publishValueAsDefault: false);
+var superAdminPassword = builder.Environment.IsDevelopment()
+    ? builder.AddParameter("superAdminPassword", value: devSuperAdminPassword, publishValueAsDefault: false)
+    : builder.AddParameter("superAdminPassword", secret: true);
+
 // Identity Web (Razor Pages UI + OAuth2/OIDC API + Orleans client)
 var identityWeb = builder.AddProject<Projects.TGharker_Identity_Web>("identity-web")
     .WithReference(orleans.AsClient())
     .WithReference(searchDb)
     .WaitFor(silo)
-    .WithExternalHttpEndpoints();
+    .WithExternalHttpEndpoints()
+    .WithEnvironment("SUPERADMIN_USERNAME", superAdminUsername)
+    .WithEnvironment("SUPERADMIN_PASSWORD", superAdminPassword);
 
 if (!builder.Environment.IsDevelopment())
 {
@@ -51,7 +60,21 @@ if (!builder.Environment.IsDevelopment())
 if (builder.Environment.IsDevelopment())
 {
     storage.RunAsEmulator();
-    postgres.RunAsContainer();
+    var devPostgrePasswordValue = "eWK3tuA5SxUWJqJ3uTXsU7";
+    var devPostgreUsername = builder.AddParameter("devPostgreUsername", "postgres");
+    var devPostgrePassword = builder.AddParameter("devPostgrePassword", devPostgrePasswordValue);
+    postgres.RunAsContainer(x => x.WithUserName(devPostgreUsername).WithPassword(devPostgrePassword));
+
+    // Add pgAdmin for database management
+    var pgadminConfigPath = Path.Combine(builder.AppHostDirectory, "pgadmin");
+    builder.AddContainer("pgadmin", "dpage/pgadmin4")
+        .WithEnvironment("PGADMIN_DEFAULT_EMAIL", "admin@admin.com")
+        .WithEnvironment("PGADMIN_DEFAULT_PASSWORD", devPostgrePasswordValue)
+        .WithEnvironment("PGADMIN_CONFIG_SERVER_MODE", "False")
+        .WithEnvironment("PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED", "False")
+        .WithBindMount(Path.Combine(pgadminConfigPath, "servers.json"), "/pgadmin4/servers.json", isReadOnly: true)
+        .WithHttpEndpoint(port: 5050, targetPort: 80)
+        .WaitFor(postgres);
 }
 
 builder.Build().Run();

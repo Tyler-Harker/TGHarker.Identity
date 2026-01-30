@@ -26,6 +26,7 @@ public class SessionValidationMiddleware
         "/tenants",
         "/tenants/index",
         "/tenants/create",
+        "/admin",  // SuperAdmin area root
         "/health",
         "/alive",
         "/ready"
@@ -34,6 +35,7 @@ public class SessionValidationMiddleware
     private static readonly string[] SkipPathPrefixes =
     [
         "/tenant/",  // Tenant-specific auth pages
+        "/admin/",   // SuperAdmin area (separate auth)
         "/.well-known/",
         "/connect/",
         "/api/",

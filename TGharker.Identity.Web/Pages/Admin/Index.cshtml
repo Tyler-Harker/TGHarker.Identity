@@ -1,0 +1,81 @@
+@page
+@model TGharker.Identity.Web.Pages.Admin.IndexModel
+@{
+    ViewData["Title"] = "Dashboard";
+    ViewData["ActivePage"] = "Dashboard";
+}
+
+<div class="row g-4">
+    @foreach (var (grainType, count) in Model.GrainCounts)
+    {
+        <div class="col-md-6 col-lg-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="rounded-circle bg-primary bg-opacity-10 p-3">
+                                <i class="bi @GetIconForGrainType(grainType) text-primary fs-4"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="text-muted mb-1">@grainType</h6>
+                            <h3 class="mb-0">@count.ToString("N0")</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent border-0">
+                    <a asp-page="/Admin/Grains" asp-route-type="@grainType" class="text-decoration-none small">
+                        View all <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-lightning-charge me-2"></i>Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <a asp-page="/Admin/Grains" class="btn btn-outline-primary w-100 py-3">
+                            <i class="bi bi-database d-block fs-3 mb-2"></i>
+                            Browse Grains
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <a asp-page="/Admin/Resync" class="btn btn-outline-warning w-100 py-3">
+                            <i class="bi bi-arrow-repeat d-block fs-3 mb-2"></i>
+                            Resync Search Index
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="/stats" target="_blank" class="btn btn-outline-info w-100 py-3">
+                            <i class="bi bi-bar-chart d-block fs-3 mb-2"></i>
+                            Public Stats
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    string GetIconForGrainType(string grainType) => grainType switch
+    {
+        "User" => "bi-person",
+        "Tenant" => "bi-building",
+        "Client" => "bi-app-indicator",
+        "Organization" => "bi-diagram-3",
+        "Invitation" => "bi-envelope",
+        "OrganizationInvitation" => "bi-envelope-plus",
+        "TenantMembership" => "bi-person-badge",
+        "OrganizationMembership" => "bi-people",
+        _ => "bi-box"
+    };
+}

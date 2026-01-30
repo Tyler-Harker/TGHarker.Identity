@@ -14,7 +14,10 @@ public sealed class ClientState
     public string TenantId { get; set; } = string.Empty;
 
     [Id(2)] public string ClientId { get; set; } = string.Empty;
-    [Id(3)] public string? ClientName { get; set; }
+
+    [Id(3)]
+    [Queryable]
+    public string? ClientName { get; set; }
     [Id(4)] public string? Description { get; set; }
     [Id(5)] public bool IsConfidential { get; set; }
 

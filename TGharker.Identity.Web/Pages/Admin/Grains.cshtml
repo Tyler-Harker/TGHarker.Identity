@@ -1,0 +1,128 @@
+@page
+@model TGharker.Identity.Web.Pages.Admin.GrainsModel
+@{
+    ViewData["Title"] = "Grains Browser";
+    ViewData["ActivePage"] = "Grains";
+}
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="get" class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label">Grain Type</label>
+                        <select asp-for="SelectedType" class="form-select" onchange="this.form.submit()">
+                            @foreach (var grainType in Model.GrainTypes)
+                            {
+                                <option value="@grainType" selected="@(grainType == Model.SelectedType)">@grainType</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Page Size</label>
+                        <select asp-for="PageSize" class="form-select" onchange="this.form.submit()">
+                            <option value="25" selected="@(Model.PageSize == 25)">25</option>
+                            <option value="50" selected="@(Model.PageSize == 50)">50</option>
+                            <option value="100" selected="@(Model.PageSize == 100)">100</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <span class="text-muted">Showing @Model.Grains.Count grains</span>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            <i class="bi bi-database me-2"></i>@Model.SelectedType Grains
+        </h5>
+    </div>
+    <div class="card-body p-0">
+        @if (Model.Grains.Count == 0)
+        {
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-inbox fs-1 d-block mb-3"></i>
+                <p>No grains found for this type.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Display Name</th>
+                            <th>Status</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var grain in Model.Grains)
+                        {
+                            <tr>
+                                <td>
+                                    <code class="small">@grain.GrainId</code>
+                                </td>
+                                <td>@grain.DisplayName</td>
+                                <td>
+                                    @if (grain.IsActive)
+                                    {
+                                        <span class="badge bg-success">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Inactive</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <a asp-page="/Admin/GrainDetails"
+                                       asp-route-grainType="@grain.GrainType"
+                                       asp-route-grainId="@grain.GrainId"
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye"></i> View
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+    @if (Model.Grains.Count > 0)
+    {
+        <div class="card-footer d-flex justify-content-between align-items-center">
+            <div>
+                @if (Model.CurrentPage > 1)
+                {
+                    <a asp-page="/Admin/Grains"
+                       asp-route-selectedType="@Model.SelectedType"
+                       asp-route-currentPage="@(Model.CurrentPage - 1)"
+                       asp-route-pageSize="@Model.PageSize"
+                       class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-chevron-left"></i> Previous
+                    </a>
+                }
+            </div>
+            <span class="text-muted small">Page @Model.CurrentPage</span>
+            <div>
+                @if (Model.Grains.Count == Model.PageSize)
+                {
+                    <a asp-page="/Admin/Grains"
+                       asp-route-selectedType="@Model.SelectedType"
+                       asp-route-currentPage="@(Model.CurrentPage + 1)"
+                       asp-route-pageSize="@Model.PageSize"
+                       class="btn btn-outline-primary btn-sm">
+                        Next <i class="bi bi-chevron-right"></i>
+                    </a>
+                }
+            </div>
+        </div>
+    }
+</div>

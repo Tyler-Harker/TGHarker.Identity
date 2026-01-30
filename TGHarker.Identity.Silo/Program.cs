@@ -40,11 +40,13 @@ builder.UseOrleans(siloBuilder =>
                 options.AdvertisedIPAddress = IPAddress.Loopback;
             });
         }
-        siloBuilder.AddAspireAzureBlobGrainStorage("innerDefault", "grainstate");
-        siloBuilder.AddSearchableGrainStorage("innerDefault");
 
-        // Aspire configures base grain storage as "Default-inner", wrap it as "Default" for grains
-        // siloBuilder.AddSearchableGrainStorage("Default-inner", "Default");
+        // Configure searchable grain storage as "Default" (what grains use)
+        // wrapping Azure Blob storage as the inner persistence layer
+        siloBuilder.AddSearchableGrainStorageAsDefault((b, innerName) =>
+        {
+            siloBuilder.AddAspireAzureBlobGrainStorage(innerName, "grainstate");
+        });
     }
     else
     {

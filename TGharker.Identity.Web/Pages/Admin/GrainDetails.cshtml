@@ -1,0 +1,44 @@
+@page
+@model TGharker.Identity.Web.Pages.Admin.GrainDetailsModel
+@{
+    ViewData["Title"] = "Grain Details";
+    ViewData["ActivePage"] = "Grains";
+}
+
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-page="/Admin/Index">Dashboard</a></li>
+        <li class="breadcrumb-item"><a asp-page="/Admin/Grains" asp-route-selectedType="@Model.GrainType">@Model.GrainType Grains</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Details</li>
+    </ol>
+</nav>
+
+@if (Model.GrainDetail == null)
+{
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        Grain not found or has no state.
+    </div>
+}
+else
+{
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="mb-0">
+                    <i class="bi bi-box me-2"></i>@Model.GrainType
+                </h5>
+                <small class="text-muted">
+                    <code>@Model.GrainId</code>
+                </small>
+            </div>
+            <a asp-page="/Admin/Grains" asp-route-selectedType="@Model.GrainType" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i>Back to List
+            </a>
+        </div>
+        <div class="card-body">
+            <h6 class="text-muted mb-3">Full State (JSON)</h6>
+            <pre class="bg-dark text-light p-3 rounded" style="max-height: 600px; overflow: auto;"><code>@Model.GrainDetail.StateJson</code></pre>
+        </div>
+    </div>
+}

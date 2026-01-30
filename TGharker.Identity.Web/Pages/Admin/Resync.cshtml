@@ -1,0 +1,125 @@
+@page
+@model TGharker.Identity.Web.Pages.Admin.ResyncModel
+@{
+    ViewData["Title"] = "Resync Search Index";
+    ViewData["ActivePage"] = "Resync";
+}
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-arrow-repeat me-2"></i>Resync Search Index</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">
+                    Use this tool to resynchronize the PostgreSQL search index with the current grain states.
+                    This is useful if the search index has become out of sync with the actual grain data.
+                </p>
+
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Note:</strong> Resyncing may take a while depending on the number of grains.
+                    The operation activates each grain to read its state.
+                </div>
+
+                @if (Model.Result != null)
+                {
+                    <div class="alert @(Model.Result.ErrorCount > 0 ? "alert-warning" : "alert-success")">
+                        <h6 class="alert-heading">
+                            <i class="bi @(Model.Result.ErrorCount > 0 ? "bi-exclamation-circle" : "bi-check-circle") me-2"></i>
+                            Resync Complete: @Model.Result.GrainType
+                        </h6>
+                        <hr>
+                        <div class="row">
+                            <div class="col-md-3">
+                                <strong>Total Processed:</strong> @Model.Result.TotalProcessed
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Success:</strong> @Model.Result.SuccessCount
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Errors:</strong> @Model.Result.ErrorCount
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Duration:</strong> @Model.Result.Duration.TotalSeconds.ToString("F2")s
+                            </div>
+                        </div>
+                        @if (Model.Result.Errors.Count > 0)
+                        {
+                            <hr>
+                            <details>
+                                <summary class="text-danger">View Errors (@Model.Result.Errors.Count)</summary>
+                                <ul class="mt-2 mb-0 small">
+                                    @foreach (var error in Model.Result.Errors.Take(20))
+                                    {
+                                        <li>@error</li>
+                                    }
+                                    @if (Model.Result.Errors.Count > 20)
+                                    {
+                                        <li class="text-muted">... and @(Model.Result.Errors.Count - 20) more</li>
+                                    }
+                                </ul>
+                            </details>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-play-circle me-2"></i>Run Resync</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Select Grain Type</label>
+                            <select asp-for="SelectedType" class="form-select">
+                                <option value="All">All Grain Types</option>
+                                @foreach (var grainType in Model.GrainTypes)
+                                {
+                                    <option value="@grainType">@grainType</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6 d-flex align-items-end">
+                            <button type="submit" class="btn btn-warning">
+                                <i class="bi bi-arrow-repeat me-2"></i>Start Resync
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Information</h6>
+            </div>
+            <div class="card-body small">
+                <p><strong>What does resync do?</strong></p>
+                <p class="text-muted">
+                    Resync iterates through all grains of the selected type(s) in the search index
+                    and activates each grain to verify its state is correctly indexed.
+                </p>
+                <p><strong>When to use?</strong></p>
+                <ul class="text-muted">
+                    <li>After schema changes to searchable fields</li>
+                    <li>If search results seem incorrect</li>
+                    <li>After database recovery operations</li>
+                </ul>
+                <p><strong>Supported grain types:</strong></p>
+                <ul class="text-muted mb-0">
+                    @foreach (var grainType in Model.GrainTypes)
+                    {
+                        <li>@grainType</li>
+                    }
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>

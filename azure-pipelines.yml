@@ -1,5 +1,17 @@
 # Azure DevOps Pipeline for TGHarker.Identity
 # Builds Docker images and deploys to Azure Container Apps
+#
+# Required Pipeline Variables (configure in Azure DevOps):
+#   ACR_NAME                  - Azure Container Registry name
+#   ACR_LOGIN_SERVER          - ACR login server URL
+#   ACR_SERVICE_CONNECTION    - Service connection for ACR
+#   AZURE_SERVICE_CONNECTION  - Service connection for Azure
+#   RESOURCE_GROUP            - Target resource group
+#   CONTAINER_APP_ENV         - Container Apps environment name
+#   STORAGE_CONNECTION_STRING - Azure Storage connection string
+#   POSTGRES_CONNECTION_STRING - PostgreSQL connection string
+#   SUPERADMIN_USERNAME       - SuperAdmin login username
+#   SUPERADMIN_PASSWORD       - SuperAdmin login password (mark as secret!)
 
 trigger:
   branches:
@@ -176,7 +188,9 @@ stages:
                             "ConnectionStrings__AzureStorage=$(STORAGE_CONNECTION_STRING)" \
                             "ConnectionStrings__searchdb-identity=$(POSTGRES_CONNECTION_STRING)" \
                             "Orleans__ClusterId=identity-cluster" \
-                            "Orleans__ServiceId=identity-service"
+                            "Orleans__ServiceId=identity-service" \
+                            "SUPERADMIN_USERNAME=$(SUPERADMIN_USERNAME)" \
+                            "SUPERADMIN_PASSWORD=$(SUPERADMIN_PASSWORD)"
                       else
                         echo "Updating identity-web container app..."
                         az containerapp update \
@@ -188,7 +202,9 @@ stages:
                             "ConnectionStrings__AzureStorage=$(STORAGE_CONNECTION_STRING)" \
                             "ConnectionStrings__searchdb-identity=$(POSTGRES_CONNECTION_STRING)" \
                             "Orleans__ClusterId=identity-cluster" \
-                            "Orleans__ServiceId=identity-service"
+                            "Orleans__ServiceId=identity-service" \
+                            "SUPERADMIN_USERNAME=$(SUPERADMIN_USERNAME)" \
+                            "SUPERADMIN_PASSWORD=$(SUPERADMIN_PASSWORD)"
                       fi
 
                 - task: AzureCLI@2

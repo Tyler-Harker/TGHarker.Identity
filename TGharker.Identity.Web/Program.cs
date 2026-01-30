@@ -60,9 +60,10 @@ builder.Services.AddScoped<IGrainSearchService, GrainSearchService>();
 builder.Services.AddScoped<IUserFlowService, UserFlowService>();
 builder.Services.AddScoped<IOrganizationCreationService, OrganizationCreationService>();
 builder.Services.AddSingleton<IOAuthCorsService, OAuthCorsService>();
+builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddMemoryCache();
 
-// Authentication - support both cookies (for Razor Pages) and JWT Bearer (for API)
+// Authentication - support both cookies (for Razor Pages), JWT Bearer (for API), and SuperAdmin
 builder.Services.AddAuthentication(options =>
     {
         options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
@@ -88,9 +89,23 @@ builder.Services.AddAuthentication(options =>
             ValidateIssuerSigningKey = false, // Will be validated per-tenant
             ClockSkew = TimeSpan.FromMinutes(1)
         };
+    })
+    .AddCookie("SuperAdmin", options =>
+    {
+        options.LoginPath = "/Admin/Login";
+        options.LogoutPath = "/Admin/Logout";
+        options.Cookie.Name = "TGHarker.Identity.SuperAdmin";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+        options.ExpireTimeSpan = TimeSpan.FromHours(2);
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("SuperAdmin", policy =>
+        policy.AddAuthenticationSchemes("SuperAdmin")
+              .RequireClaim("is_superadmin", "true"));
+});
 
 // Swagger for API documentation
 builder.Services.AddEndpointsApiExplorer();

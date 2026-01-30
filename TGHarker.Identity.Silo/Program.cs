@@ -74,7 +74,7 @@ builder.UseOrleans(siloBuilder =>
             siloBuilder.AddAzureBlobGrainStorage(innerName, options =>
             {
                 options.BlobServiceClient = new BlobServiceClient(storageConnectionString);
-                options.ContainerName = "grains";
+                options.ContainerName = "identity-grains";
             });
         });
     }

@@ -80,6 +80,32 @@
     </div>
 </section>
 
+<!-- Platform Stats Section -->
+<section class="stats-section py-5">
+    <div class="container">
+        <div class="row g-4 justify-content-center text-center">
+            <div class="col-md-4">
+                <div class="stat-item">
+                    <h2 class="stat-number text-primary">@Model.Stats.TotalUsers.ToString("N0")</h2>
+                    <p class="stat-label text-muted mb-0">Registered Users</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-item">
+                    <h2 class="stat-number text-success">@Model.Stats.TotalTenants.ToString("N0")</h2>
+                    <p class="stat-label text-muted mb-0">Organizations</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-item">
+                    <h2 class="stat-number text-info">@Model.Stats.MonthlyActiveUsers.ToString("N0")</h2>
+                    <p class="stat-label text-muted mb-0">Monthly Active Users</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
 <!-- Features Section -->
 <section class="features-section" id="features">
     <div class="container">
@@ -261,7 +287,7 @@
                     </div>
                     <h4>Documentation</h4>
                     <p>Comprehensive guides covering authentication flows, API reference, and best practices.</p>
-                    <a href="#" class="btn btn-link">Read Docs <i class="bi bi-arrow-right"></i></a>
+                    <a asp-page="/Docs/Index" class="btn btn-link">Read Docs <i class="bi bi-arrow-right"></i></a>
                 </div>
             </div>
             <div class="col-md-4">
@@ -271,17 +297,17 @@
                     </div>
                     <h4>Quick Start Guides</h4>
                     <p>Step-by-step tutorials for React, Angular, Vue, .NET, Node.js, and more.</p>
-                    <a href="#" class="btn btn-link">Get Started <i class="bi bi-arrow-right"></i></a>
+                    <a asp-page="/Docs/GettingStarted" class="btn btn-link">Get Started <i class="bi bi-arrow-right"></i></a>
                 </div>
             </div>
             <div class="col-md-4">
                 <div class="feature-card text-center">
                     <div class="feature-icon bg-info-subtle text-info mx-auto">
-                        <i class="bi bi-github"></i>
+                        <i class="bi bi-code-slash"></i>
                     </div>
-                    <h4>Sample Projects</h4>
-                    <p>Ready-to-run sample applications demonstrating common integration patterns.</p>
-                    <a href="#" class="btn btn-link">View on GitHub <i class="bi bi-arrow-right"></i></a>
+                    <h4>SDKs & Libraries</h4>
+                    <p>Use standard OAuth libraries for JavaScript, .NET, Python, Java, Go, and mobile platforms.</p>
+                    <a asp-page="/Docs/Sdks" class="btn btn-link">View SDKs <i class="bi bi-arrow-right"></i></a>
                 </div>
             </div>
         </div>

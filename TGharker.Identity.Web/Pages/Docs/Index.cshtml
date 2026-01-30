@@ -1,0 +1,92 @@
+@page
+@model TGharker.Identity.Web.Pages.Docs.IndexModel
+@{
+    ViewData["Title"] = "Documentation";
+    Layout = "_DocsLayout";
+}
+
+<h1>TGHarker Identity Documentation</h1>
+<p class="lead">
+    Everything you need to integrate secure authentication and authorization into your applications.
+</p>
+
+<h2>What is TGHarker Identity?</h2>
+<p>
+    TGHarker Identity is a modern identity and access management platform built on OAuth 2.0 and OpenID Connect standards.
+    It provides secure authentication, multi-tenant support, and comprehensive user management for your applications.
+</p>
+
+<div class="docs-callout docs-callout-info">
+    <p><strong>New to TGHarker Identity?</strong> Start with our <a href="/Docs/GettingStarted">Quick Start Guide</a> to get up and running in minutes.</p>
+</div>
+
+<h2>Core Features</h2>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="docs-card">
+            <h4><i class="bi bi-key text-primary me-2"></i>OAuth 2.0 & OpenID Connect</h4>
+            <p>Industry-standard protocols for secure authentication. Support for Authorization Code, Client Credentials, and more.</p>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="docs-card">
+            <h4><i class="bi bi-building text-success me-2"></i>Multi-Tenant Architecture</h4>
+            <p>Built for SaaS applications. Isolate users and data per organization while managing everything centrally.</p>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="docs-card">
+            <h4><i class="bi bi-people text-info me-2"></i>User Management</h4>
+            <p>Complete user lifecycle with registration, email verification, password reset, and profile management.</p>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="docs-card">
+            <h4><i class="bi bi-shield-check text-warning me-2"></i>Security First</h4>
+            <p>PBKDF2 password hashing, brute-force protection, PKCE support, and comprehensive audit logging.</p>
+        </div>
+    </div>
+</div>
+
+<h2>Quick Links</h2>
+
+<div class="row g-3">
+    <div class="col-md-4">
+        <a href="/Docs/GettingStarted" class="docs-card d-block text-decoration-none">
+            <h4><i class="bi bi-rocket-takeoff me-2"></i>Quick Start</h4>
+            <p>Get your first application connected in 5 minutes.</p>
+        </a>
+    </div>
+    <div class="col-md-4">
+        <a href="/Docs/ApiReference" class="docs-card d-block text-decoration-none">
+            <h4><i class="bi bi-braces me-2"></i>API Reference</h4>
+            <p>Explore all available endpoints and their parameters.</p>
+        </a>
+    </div>
+    <div class="col-md-4">
+        <a href="/Docs/Authentication" class="docs-card d-block text-decoration-none">
+            <h4><i class="bi bi-diagram-3 me-2"></i>Auth Flows</h4>
+            <p>Understand OAuth 2.0 flows and when to use each one.</p>
+        </a>
+    </div>
+</div>
+
+<h2>OpenID Connect Discovery</h2>
+<p>
+    TGHarker Identity exposes standard OpenID Connect discovery endpoints. You can find the configuration at:
+</p>
+
+<pre><code>GET /.well-known/openid-configuration</code></pre>
+
+<p>
+    This endpoint returns all the information needed to configure your OAuth client, including:
+</p>
+
+<ul>
+    <li>Authorization endpoint</li>
+    <li>Token endpoint</li>
+    <li>UserInfo endpoint</li>
+    <li>Supported scopes and grant types</li>
+    <li>JWKS URI for token validation</li>
+</ul>

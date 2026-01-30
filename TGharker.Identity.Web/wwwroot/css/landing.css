@@ -82,6 +82,35 @@ body {
     color: #3fb950;
 }
 
+/* Stats Section */
+.stats-section {
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.stat-item {
+    padding: 1rem;
+}
+
+.stat-number {
+    font-size: 3rem;
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+@media (max-width: 767.98px) {
+    .stat-number {
+        font-size: 2.25rem;
+    }
+}
+
 /* Features Section */
 .features-section {
     padding: 6rem 0;

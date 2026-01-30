@@ -1,0 +1,166 @@
+@page
+@model TGharker.Identity.Web.Pages.Docs.AuthenticationModel
+@{
+    ViewData["Title"] = "Authentication Flows";
+    Layout = "_DocsLayout";
+}
+
+<h1>Authentication Flows</h1>
+<p class="lead">
+    TGHarker Identity supports multiple OAuth 2.0 and OpenID Connect flows. Choose the right one for your application type.
+</p>
+
+<h2>Authorization Code Flow (Recommended)</h2>
+<p>
+    The most secure flow for web applications and native apps. Use this when your application can securely store a client secret
+    or when using PKCE for public clients.
+</p>
+
+<div class="docs-callout docs-callout-success">
+    <p><strong>Best for:</strong> Web applications, mobile apps, single-page applications (with PKCE)</p>
+</div>
+
+<h3>Flow Diagram</h3>
+<pre><code>1. User clicks "Login"
+2. App redirects to /connect/authorize
+3. User authenticates with TGHarker Identity
+4. Identity redirects back with authorization code
+5. App exchanges code for tokens at /connect/token
+6. App receives access_token, id_token, refresh_token</code></pre>
+
+<h3>Required Parameters</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Parameter</th>
+            <th>Required</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><code>tenant</code></td>
+            <td>Yes*</td>
+            <td>Tenant identifier (can also use <code>X-Tenant-Id</code> header or subdomain)</td>
+        </tr>
+        <tr>
+            <td><code>response_type</code></td>
+            <td>Yes</td>
+            <td>Must be <code>code</code></td>
+        </tr>
+        <tr>
+            <td><code>client_id</code></td>
+            <td>Yes</td>
+            <td>Your application's client ID</td>
+        </tr>
+        <tr>
+            <td><code>redirect_uri</code></td>
+            <td>Yes</td>
+            <td>Must match a registered redirect URI</td>
+        </tr>
+        <tr>
+            <td><code>scope</code></td>
+            <td>Yes</td>
+            <td>Space-separated list of scopes (include <code>openid</code>)</td>
+        </tr>
+        <tr>
+            <td><code>state</code></td>
+            <td>Recommended</td>
+            <td>Random string to prevent CSRF attacks</td>
+        </tr>
+        <tr>
+            <td><code>code_challenge</code></td>
+            <td>Required for PKCE</td>
+            <td>Base64-URL encoded SHA256 hash of code_verifier</td>
+        </tr>
+        <tr>
+            <td><code>code_challenge_method</code></td>
+            <td>Required for PKCE</td>
+            <td>Must be <code>S256</code></td>
+        </tr>
+    </tbody>
+</table>
+
+<h2>Client Credentials Flow</h2>
+<p>
+    For server-to-server communication where no user is involved. The application authenticates using its own credentials.
+</p>
+
+<div class="docs-callout docs-callout-info">
+    <p><strong>Best for:</strong> Backend services, daemons, APIs calling other APIs</p>
+</div>
+
+<h3>Token Request</h3>
+<pre><code>POST /connect/token
+Content-Type: application/x-www-form-urlencoded
+Authorization: Basic BASE64(client_id:client_secret)
+
+grant_type=client_credentials
+&scope=api</code></pre>
+
+<h3>Response</h3>
+<pre><code>{
+  "access_token": "eyJhbGciOiJSUzI1NiIs...",
+  "token_type": "Bearer",
+  "expires_in": 3600
+}</code></pre>
+
+<h2>Refresh Token Flow</h2>
+<p>
+    Use a refresh token to obtain new access tokens without requiring the user to re-authenticate.
+</p>
+
+<h3>Token Request</h3>
+<pre><code>POST /connect/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=refresh_token
+&refresh_token=YOUR_REFRESH_TOKEN
+&client_id=YOUR_CLIENT_ID</code></pre>
+
+<div class="docs-callout docs-callout-warning">
+    <p><strong>Security Note:</strong> Refresh tokens are rotated on each use. The old refresh token becomes invalid once a new one is issued.</p>
+</div>
+
+<h2>PKCE (Proof Key for Code Exchange)</h2>
+<p>
+    PKCE adds an extra layer of security for public clients (SPAs, mobile apps) that cannot securely store a client secret.
+</p>
+
+<h3>How PKCE Works</h3>
+<ol>
+    <li>Generate a random <code>code_verifier</code> (43-128 characters)</li>
+    <li>Create <code>code_challenge</code> = Base64URL(SHA256(code_verifier))</li>
+    <li>Include <code>code_challenge</code> in the authorization request</li>
+    <li>Include original <code>code_verifier</code> in the token request</li>
+    <li>Server verifies the challenge matches the verifier</li>
+</ol>
+
+<h3>JavaScript Example</h3>
+<pre><code>// Generate code verifier
+function generateCodeVerifier() {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return base64UrlEncode(array);
+}
+
+// Generate code challenge
+async function generateCodeChallenge(verifier) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(verifier);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return base64UrlEncode(new Uint8Array(hash));
+}</code></pre>
+
+<h2>Logout</h2>
+<p>
+    To log a user out, redirect them to the end session endpoint:
+</p>
+
+<pre><code>GET /connect/endsession?
+  id_token_hint=USER_ID_TOKEN
+  &post_logout_redirect_uri=https://yourapp.com/logged-out</code></pre>
+
+<p>
+    The <code>post_logout_redirect_uri</code> must be registered for your client.
+</p>

@@ -29,7 +29,10 @@ public sealed class UserState
     [Id(11)] public DateTime? LockoutEnd { get; set; }
     [Id(12)] public int FailedLoginAttempts { get; set; }
     [Id(13)] public DateTime CreatedAt { get; set; }
-    [Id(14)] public DateTime? LastLoginAt { get; set; }
+
+    [Id(14)]
+    [Queryable]
+    public DateTime? LastLoginAt { get; set; }
     [Id(15)] public List<string> TenantMemberships { get; set; } = [];
     [Id(16)] public string? PasswordResetToken { get; set; }
     [Id(17)] public DateTime? PasswordResetTokenExpiry { get; set; }

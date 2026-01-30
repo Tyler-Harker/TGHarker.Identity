@@ -1,0 +1,135 @@
+@page
+@model TGharker.Identity.Web.Pages.Docs.GettingStartedModel
+@{
+    ViewData["Title"] = "Getting Started";
+    Layout = "_DocsLayout";
+}
+
+<h1>Getting Started</h1>
+<p class="lead">
+    Get your application connected to TGHarker Identity in just a few steps.
+</p>
+
+<h2>Step 1: Create an Account</h2>
+<p>
+    First, <a href="/Account/Register">create a free account</a> on TGHarker Identity. After verifying your email,
+    you'll be able to create your first organization (tenant).
+</p>
+
+<h2>Step 2: Create Your Organization</h2>
+<p>
+    Organizations (tenants) are isolated environments for your users and applications. Each organization has its own:
+</p>
+<ul>
+    <li>User directory</li>
+    <li>OAuth clients (applications)</li>
+    <li>Roles and permissions</li>
+    <li>Branding settings</li>
+</ul>
+
+<h2>Step 3: Register Your Application</h2>
+<p>
+    From your dashboard, navigate to <strong>Clients</strong> and create a new application. You'll need to provide:
+</p>
+
+<table>
+    <thead>
+        <tr>
+            <th>Field</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><code>Client ID</code></td>
+            <td>A unique identifier for your application (e.g., <code>my-web-app</code>)</td>
+        </tr>
+        <tr>
+            <td><code>Redirect URIs</code></td>
+            <td>URLs where users will be redirected after authentication</td>
+        </tr>
+        <tr>
+            <td><code>Grant Types</code></td>
+            <td>The OAuth flows your app will use (Authorization Code recommended)</td>
+        </tr>
+        <tr>
+            <td><code>Scopes</code></td>
+            <td>What data your app can access (<code>openid</code>, <code>profile</code>, <code>email</code>)</td>
+        </tr>
+    </tbody>
+</table>
+
+<div class="docs-callout docs-callout-info">
+    <p><strong>Security Tip:</strong> Always enable PKCE for public clients (SPAs, mobile apps). It's enabled by default for new applications.</p>
+</div>
+
+<h2>Step 4: Integrate with Your Application</h2>
+
+<h3>Using the Authorization Code Flow</h3>
+<p>
+    The Authorization Code flow is recommended for most applications. Here's how it works:
+</p>
+
+<h4>1. Redirect to Authorization</h4>
+<pre><code>GET /connect/authorize?
+  tenant=YOUR_TENANT_IDENTIFIER
+  &response_type=code
+  &client_id=YOUR_CLIENT_ID
+  &redirect_uri=https://yourapp.com/callback
+  &scope=openid profile email
+  &state=random_state_value
+  &code_challenge=BASE64_CHALLENGE
+  &code_challenge_method=S256</code></pre>
+
+<div class="docs-callout docs-callout-warning">
+    <p><strong>Required:</strong> The <code>tenant</code> parameter specifies which organization to authenticate against. Alternatively, use the <code>X-Tenant-Id</code> header or a tenant subdomain.</p>
+</div>
+
+<h4>2. Exchange Code for Tokens</h4>
+<pre><code>POST /connect/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=authorization_code
+&code=AUTHORIZATION_CODE
+&redirect_uri=https://yourapp.com/callback
+&client_id=YOUR_CLIENT_ID
+&code_verifier=ORIGINAL_VERIFIER</code></pre>
+
+<h4>3. Response</h4>
+<pre><code>{
+  "access_token": "eyJhbGciOiJSUzI1NiIs...",
+  "token_type": "Bearer",
+  "expires_in": 3600,
+  "id_token": "eyJhbGciOiJSUzI1NiIs...",
+  "refresh_token": "def50200..."
+}</code></pre>
+
+<div class="docs-callout docs-callout-info">
+    <p><strong>Tenant Context:</strong> Since OAuth clients are registered within a tenant, your tokens will automatically include tenant claims (<code>tenant_id</code>, <code>tenant_identifier</code>). See <a href="/Docs/ApiReference">API Reference</a> for details on tenant context.</p>
+</div>
+
+<h2>Step 5: Get User Information</h2>
+<p>
+    Use the access token to retrieve user information:
+</p>
+
+<pre><code>GET /connect/userinfo
+Authorization: Bearer YOUR_ACCESS_TOKEN</code></pre>
+
+<p>Response:</p>
+<pre><code>{
+  "sub": "user-123",
+  "email": "user@example.com",
+  "email_verified": true,
+  "name": "John Doe",
+  "given_name": "John",
+  "family_name": "Doe"
+}</code></pre>
+
+<h2>Next Steps</h2>
+<ul>
+    <li><a href="/Docs/Authentication">Learn about different authentication flows</a></li>
+    <li><a href="/Docs/Tokens">Understand tokens and scopes</a></li>
+    <li><a href="/Docs/ApiReference">Explore the full API reference</a></li>
+    <li><a href="/Docs/Sdks">Find SDKs for your platform</a></li>
+</ul>

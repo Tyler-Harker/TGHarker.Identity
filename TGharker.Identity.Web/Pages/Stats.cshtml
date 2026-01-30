@@ -1,0 +1,89 @@
+@page
+@model StatsModel
+@{
+    ViewData["Title"] = "Platform Statistics";
+    Layout = "_LandingLayout";
+}
+
+<!-- Stats Hero Section -->
+<section class="hero-section">
+    <div class="container">
+        <div class="text-center">
+            <h1 class="hero-title">
+                Platform <span class="text-primary">Statistics</span>
+            </h1>
+            <p class="hero-subtitle">
+                Real-time metrics from the TGHarker Identity platform.
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- Stats Cards Section -->
+<section class="features-section">
+    <div class="container">
+        <div class="row g-4 justify-content-center">
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card text-center">
+                    <div class="feature-icon bg-primary-subtle text-primary mx-auto">
+                        <i class="bi bi-people-fill"></i>
+                    </div>
+                    <h2 class="stats-number">@Model.Stats.TotalUsers.ToString("N0")</h2>
+                    <h4>Registered Users</h4>
+                    <p>Total active users on the platform</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card text-center">
+                    <div class="feature-icon bg-success-subtle text-success mx-auto">
+                        <i class="bi bi-building"></i>
+                    </div>
+                    <h2 class="stats-number">@Model.Stats.TotalTenants.ToString("N0")</h2>
+                    <h4>Organizations</h4>
+                    <p>Active tenants using our services</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card text-center">
+                    <div class="feature-icon bg-info-subtle text-info mx-auto">
+                        <i class="bi bi-graph-up-arrow"></i>
+                    </div>
+                    <h2 class="stats-number">@Model.Stats.MonthlyActiveUsers.ToString("N0")</h2>
+                    <h4>Monthly Active Users</h4>
+                    <p>Users active in the last 30 days</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mt-5">
+            <p class="text-muted">
+                <small>Last updated: @Model.Stats.GeneratedAt.ToString("MMMM dd, yyyy 'at' HH:mm 'UTC'")</small>
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="cta-section">
+    <div class="container text-center">
+        <h2>Join Our Growing Community</h2>
+        <p>Be part of a platform trusted by developers worldwide.</p>
+        <div class="d-flex gap-3 justify-content-center flex-wrap">
+            <a asp-page="/Account/Register" class="btn btn-light btn-lg px-4">
+                Get Started Free
+            </a>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <style>
+        .stats-number {
+            font-size: 3.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            line-height: 1.2;
+        }
+    </style>
+}

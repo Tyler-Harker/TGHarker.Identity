@@ -59,6 +59,7 @@ builder.Services.AddScoped<ISessionService, SessionService>();
 builder.Services.AddScoped<IGrainSearchService, GrainSearchService>();
 builder.Services.AddScoped<IUserFlowService, UserFlowService>();
 builder.Services.AddScoped<IOrganizationCreationService, OrganizationCreationService>();
+builder.Services.AddMemoryCache();
 
 // Authentication - support both cookies (for Razor Pages) and JWT Bearer (for API)
 builder.Services.AddAuthentication(options =>
@@ -125,6 +126,7 @@ app.MapUserInfoEndpoint();
 app.MapRevocationEndpoint();
 app.MapIntrospectionEndpoint();
 app.MapTenantEndpoints();
+app.MapStatsEndpoint();
 
 // Map Razor Pages
 app.MapStaticAssets();

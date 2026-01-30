@@ -1,0 +1,184 @@
+@page
+@model TGharker.Identity.Web.Pages.Docs.TokensModel
+@{
+    ViewData["Title"] = "Tokens & Scopes";
+    Layout = "_DocsLayout";
+}
+
+<h1>Tokens & Scopes</h1>
+<p class="lead">
+    Understanding the different token types and scopes in TGHarker Identity.
+</p>
+
+<h2>Token Types</h2>
+
+<h3>Access Token</h3>
+<p>
+    Access tokens are used to authorize API requests on behalf of a user or application.
+    They are short-lived (typically 1 hour) and should be included in the <code>Authorization</code> header.
+</p>
+<pre><code>Authorization: Bearer eyJhbGciOiJSUzI1NiIs...</code></pre>
+
+<div class="docs-callout docs-callout-warning">
+    <p><strong>Security:</strong> Never expose access tokens in URLs or client-side code. Always transmit over HTTPS.</p>
+</div>
+
+<h3>ID Token</h3>
+<p>
+    ID tokens are JSON Web Tokens (JWTs) containing claims about the authenticated user.
+    They are returned when the <code>openid</code> scope is requested.
+</p>
+
+<h4>Example ID Token Claims</h4>
+<pre><code>{
+  "iss": "https://identity.tgharker.com",
+  "sub": "user-123",
+  "aud": "my-client-id",
+  "exp": 1706540400,
+  "iat": 1706536800,
+  "auth_time": 1706536800,
+  "nonce": "abc123",
+  "email": "user@example.com",
+  "email_verified": true,
+  "name": "John Doe",
+  "tenant_id": "550e8400-e29b-41d4-a716-446655440000",
+  "tenant_identifier": "my-company"
+}</code></pre>
+
+<div class="docs-callout docs-callout-info">
+    <p><strong>Tenant Claims:</strong> Tokens include <code>tenant_id</code> and <code>tenant_identifier</code> claims because OAuth clients are registered within a specific tenant. Use these claims to scope your application's data access.</p>
+</div>
+
+<h3>Refresh Token</h3>
+<p>
+    Refresh tokens are long-lived tokens used to obtain new access tokens without requiring
+    the user to re-authenticate. They are only issued when the <code>offline_access</code> scope is requested.
+</p>
+
+<div class="docs-callout docs-callout-info">
+    <p><strong>Token Rotation:</strong> Refresh tokens are rotated on each use. Store the new refresh token from each response.</p>
+</div>
+
+<h2>Available Scopes</h2>
+
+<table>
+    <thead>
+        <tr>
+            <th>Scope</th>
+            <th>Description</th>
+            <th>Claims Included</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><code>openid</code></td>
+            <td>Required for OpenID Connect. Returns an ID token.</td>
+            <td><code>sub</code></td>
+        </tr>
+        <tr>
+            <td><code>profile</code></td>
+            <td>Basic profile information</td>
+            <td><code>name</code>, <code>given_name</code>, <code>family_name</code>, <code>picture</code></td>
+        </tr>
+        <tr>
+            <td><code>email</code></td>
+            <td>User's email address</td>
+            <td><code>email</code>, <code>email_verified</code></td>
+        </tr>
+        <tr>
+            <td><code>phone</code></td>
+            <td>User's phone number</td>
+            <td><code>phone_number</code>, <code>phone_number_verified</code></td>
+        </tr>
+        <tr>
+            <td><code>offline_access</code></td>
+            <td>Request a refresh token for long-lived access</td>
+            <td>N/A (enables refresh token)</td>
+        </tr>
+    </tbody>
+</table>
+
+<h2>Token Validation</h2>
+
+<h3>Validating Access Tokens</h3>
+<p>
+    Access tokens can be validated using token introspection or by verifying the JWT signature locally.
+</p>
+
+<h4>Option 1: Token Introspection</h4>
+<pre><code>POST /connect/introspect
+Content-Type: application/x-www-form-urlencoded
+Authorization: Basic {client_credentials}
+
+token=ACCESS_TOKEN</code></pre>
+
+<h4>Option 2: Local JWT Validation</h4>
+<ol>
+    <li>Fetch the JWKS from <code>/.well-known/openid-configuration</code> → <code>jwks_uri</code></li>
+    <li>Verify the token signature using the public key</li>
+    <li>Check <code>exp</code> claim hasn't passed</li>
+    <li>Verify <code>iss</code> matches your identity server</li>
+    <li>Verify <code>aud</code> includes your client ID</li>
+</ol>
+
+<h3>Validating ID Tokens</h3>
+<p>
+    ID tokens must always be validated before trusting their claims:
+</p>
+<ol>
+    <li>Verify the JWT signature</li>
+    <li>Check <code>iss</code> matches the expected issuer</li>
+    <li>Check <code>aud</code> matches your client ID</li>
+    <li>Check <code>exp</code> hasn't passed</li>
+    <li>If you sent a <code>nonce</code>, verify it matches</li>
+</ol>
+
+<h2>Token Lifetimes</h2>
+
+<table>
+    <thead>
+        <tr>
+            <th>Token Type</th>
+            <th>Default Lifetime</th>
+            <th>Configurable</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>Access Token</td>
+            <td>1 hour</td>
+            <td>Per client</td>
+        </tr>
+        <tr>
+            <td>ID Token</td>
+            <td>1 hour</td>
+            <td>Per client</td>
+        </tr>
+        <tr>
+            <td>Refresh Token</td>
+            <td>30 days</td>
+            <td>Per client</td>
+        </tr>
+        <tr>
+            <td>Authorization Code</td>
+            <td>5 minutes</td>
+            <td>No</td>
+        </tr>
+    </tbody>
+</table>
+
+<h2>Revoking Tokens</h2>
+<p>
+    Tokens can be revoked when a user logs out or when access should be immediately terminated.
+</p>
+
+<pre><code>POST /connect/revoke
+Content-Type: application/x-www-form-urlencoded
+
+token=REFRESH_TOKEN
+&token_type_hint=refresh_token
+&client_id=YOUR_CLIENT_ID</code></pre>
+
+<div class="docs-callout docs-callout-info">
+    <p><strong>Best Practice:</strong> Revoke refresh tokens on logout to prevent continued access.</p>
+</div>

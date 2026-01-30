@@ -72,6 +72,22 @@ public interface IGrainSearchService
     /// Find a pending organization invitation for a specific email, tenant, and organization.
     /// </summary>
     Task<IOrganizationInvitationGrain?> GetPendingOrganizationInvitationAsync(string tenantId, string orgId, string email);
+
+    /// <summary>
+    /// Get platform statistics for public display.
+    /// </summary>
+    Task<PlatformStats> GetPlatformStatsAsync();
+}
+
+/// <summary>
+/// Platform-wide statistics for public display.
+/// </summary>
+public sealed class PlatformStats
+{
+    public long TotalUsers { get; set; }
+    public long TotalTenants { get; set; }
+    public long MonthlyActiveUsers { get; set; }
+    public DateTime GeneratedAt { get; set; }
 }
 
 public class GrainSearchService : IGrainSearchService
@@ -314,6 +330,56 @@ public class GrainSearchService : IGrainSearchService
         {
             _logger.LogError(ex, "Failed to search for pending organization invitation for {Email} in org {OrgId} tenant {TenantId}", normalizedEmail, orgId, tenantId);
             return null;
+        }
+    }
+
+    public async Task<PlatformStats> GetPlatformStatsAsync()
+    {
+        try
+        {
+            var thirtyDaysAgo = DateTime.UtcNow.AddDays(-30);
+
+            // Execute user and tenant count queries in parallel
+            var totalUsersTask = _clusterClient.Search<IUserGrain>()
+                .Where(u => u.IsActive)
+                .CountAsync();
+
+            var totalTenantsTask = _clusterClient.Search<ITenantGrain>()
+                .Where(t => t.IsActive)
+                .CountAsync();
+
+            // For MAU, we need to fetch active users and filter by LastLoginAt
+            // since LastLoginAt is queryable but may need index rebuild
+            var activeUsersTask = _clusterClient.Search<IUserGrain>()
+                .Where(u => u.IsActive)
+                .ToListAsync();
+
+            await Task.WhenAll(totalUsersTask, totalTenantsTask, activeUsersTask);
+
+            // Calculate MAU by checking LastLoginAt on each user
+            var activeUsers = await activeUsersTask;
+            var mauCount = 0L;
+            foreach (var userGrain in activeUsers)
+            {
+                var state = await userGrain.GetStateAsync();
+                if (state?.LastLoginAt >= thirtyDaysAgo)
+                {
+                    mauCount++;
+                }
+            }
+
+            return new PlatformStats
+            {
+                TotalUsers = await totalUsersTask,
+                TotalTenants = await totalTenantsTask,
+                MonthlyActiveUsers = mauCount,
+                GeneratedAt = DateTime.UtcNow
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get platform stats");
+            return new PlatformStats { GeneratedAt = DateTime.UtcNow };
         }
     }
 }

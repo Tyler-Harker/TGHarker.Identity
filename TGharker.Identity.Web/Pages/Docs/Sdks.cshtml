@@ -1,0 +1,162 @@
+@page
+@model TGharker.Identity.Web.Pages.Docs.SdksModel
+@{
+    ViewData["Title"] = "SDKs & Libraries";
+    Layout = "_DocsLayout";
+}
+
+<h1>SDKs & Libraries</h1>
+<p class="lead">
+    Use standard OAuth 2.0 / OpenID Connect libraries to integrate with TGHarker Identity.
+</p>
+
+<div class="docs-callout docs-callout-info">
+    <p>TGHarker Identity is fully compatible with any OAuth 2.0 / OpenID Connect compliant library. Use your preferred library for your platform.</p>
+</div>
+
+<h2>JavaScript / TypeScript</h2>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="docs-card">
+            <h4><i class="bi bi-box me-2"></i>oidc-client-ts</h4>
+            <p>Full-featured OpenID Connect client for browser-based applications.</p>
+            <pre><code>npm install oidc-client-ts</code></pre>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="docs-card">
+            <h4><i class="bi bi-box me-2"></i>@@auth0/auth0-spa-js</h4>
+            <p>Lightweight SDK that works with any OIDC provider.</p>
+            <pre><code>npm install @@auth0/auth0-spa-js</code></pre>
+        </div>
+    </div>
+</div>
+
+<h3>Example: React with oidc-client-ts</h3>
+<pre><code>import { UserManager, WebStorageStateStore } from 'oidc-client-ts';
+
+const userManager = new UserManager({
+  authority: 'https://your-identity-server.com',
+  client_id: 'your-client-id',
+  redirect_uri: 'https://yourapp.com/callback',
+  scope: 'openid profile email',
+  userStore: new WebStorageStateStore({ store: window.localStorage })
+});
+
+// Login
+await userManager.signinRedirect();
+
+// Handle callback
+const user = await userManager.signinRedirectCallback();
+console.log('Logged in as:', user.profile.name);</code></pre>
+
+<h2>.NET</h2>
+
+<div class="docs-card">
+    <h4><i class="bi bi-microsoft me-2"></i>Microsoft.AspNetCore.Authentication.OpenIdConnect</h4>
+    <p>Built-in ASP.NET Core middleware for OpenID Connect authentication.</p>
+    <pre><code>dotnet add package Microsoft.AspNetCore.Authentication.OpenIdConnect</code></pre>
+</div>
+
+<h3>Example: ASP.NET Core</h3>
+<pre><code>builder.Services.AddAuthentication(options =>
+{
+    options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
+})
+.AddCookie()
+.AddOpenIdConnect(options =>
+{
+    options.Authority = "https://your-identity-server.com";
+    options.ClientId = "your-client-id";
+    options.ClientSecret = "your-client-secret";
+    options.ResponseType = "code";
+    options.Scope.Add("profile");
+    options.Scope.Add("email");
+    options.SaveTokens = true;
+});</code></pre>
+
+<h2>Python</h2>
+
+<div class="docs-card">
+    <h4><i class="bi bi-filetype-py me-2"></i>Authlib</h4>
+    <p>Comprehensive OAuth/OIDC library for Python applications.</p>
+    <pre><code>pip install authlib</code></pre>
+</div>
+
+<h3>Example: Flask</h3>
+<pre><code>from authlib.integrations.flask_client import OAuth
+
+oauth = OAuth(app)
+oauth.register(
+    name='tgharker',
+    client_id='your-client-id',
+    client_secret='your-client-secret',
+    server_metadata_url='https://your-identity-server.com/.well-known/openid-configuration',
+    client_kwargs={'scope': 'openid profile email'}
+)
+
+@@app.route('/login')
+def login():
+    redirect_uri = url_for('callback', _external=True)
+    return oauth.tgharker.authorize_redirect(redirect_uri)</code></pre>
+
+<h2>Java / Kotlin</h2>
+
+<div class="docs-card">
+    <h4><i class="bi bi-cup-hot me-2"></i>Spring Security OAuth2</h4>
+    <p>Spring Security's built-in OAuth2/OIDC support.</p>
+    <pre><code>implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'</code></pre>
+</div>
+
+<h3>Example: Spring Boot</h3>
+<pre><code>spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          tgharker:
+            client-id: your-client-id
+            client-secret: your-client-secret
+            scope: openid,profile,email
+        provider:
+          tgharker:
+            issuer-uri: https://your-identity-server.com</code></pre>
+
+<h2>Go</h2>
+
+<div class="docs-card">
+    <h4><i class="bi bi-code-slash me-2"></i>coreos/go-oidc</h4>
+    <p>OpenID Connect client library for Go.</p>
+    <pre><code>go get github.com/coreos/go-oidc/v3/oidc</code></pre>
+</div>
+
+<h2>Mobile</h2>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="docs-card">
+            <h4><i class="bi bi-apple me-2"></i>iOS - AppAuth</h4>
+            <p>OAuth 2.0 client for iOS and macOS.</p>
+            <pre><code>pod 'AppAuth'</code></pre>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="docs-card">
+            <h4><i class="bi bi-android2 me-2"></i>Android - AppAuth</h4>
+            <p>OAuth 2.0 client for Android.</p>
+            <pre><code>implementation 'net.openid:appauth:0.11.1'</code></pre>
+        </div>
+    </div>
+</div>
+
+<h2>Need Help?</h2>
+<p>
+    If you need assistance integrating with TGHarker Identity, check out our other documentation:
+</p>
+<ul>
+    <li><a href="/Docs/GettingStarted">Getting Started Guide</a></li>
+    <li><a href="/Docs/Authentication">Authentication Flows</a></li>
+    <li><a href="/Docs/ApiReference">API Reference</a></li>
+</ul>

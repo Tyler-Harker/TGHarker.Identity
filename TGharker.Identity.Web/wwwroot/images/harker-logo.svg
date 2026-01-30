@@ -1,0 +1,60 @@
+<svg
+  width="200"
+  height="240"
+  viewBox="0 0 200 240"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <!-- Shield -->
+  <path
+    d="M100 20
+       L170 45
+       V120
+       C170 165 130 195 100 215
+       C70 195 30 165 30 120
+       V45
+       Z"
+    fill="#0D6EFD"
+  />
+
+  <!-- Lock shackle -->
+  <path
+    d="M75 95
+       V80
+       C75 60 125 60 125 80
+       V95"
+    fill="none"
+    stroke="#FFFFFF"
+    stroke-width="10"
+    stroke-linecap="round"
+  />
+
+  <!-- Lock body -->
+  <rect
+    x="65"
+    y="95"
+    width="70"
+    height="60"
+    rx="8"
+    fill="#FFFFFF"
+  />
+
+  <!-- Custom H cut into lock -->
+  <path
+    d="
+      M80 105
+      V145
+      H92
+      V130
+      H108
+      V145
+      H120
+      V105
+      H108
+      V118
+      H92
+      V105
+      Z
+    "
+    fill="#0D6EFD"
+  />
+</svg>

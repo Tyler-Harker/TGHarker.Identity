@@ -1,11 +1,9 @@
 using System.Net;
 using Azure.Data.Tables;
 using Azure.Storage.Blobs;
-using Microsoft.EntityFrameworkCore;
 using Orleans.Configuration;
 using TGHarker.Identity.Abstractions.Models.Generated;
 using TGHarker.Orleans.Search.Orleans.Extensions;
-using TGHarker.Orleans.Search.PostgreSQL;
 using TGHarker.Orleans.Search.PostgreSQL.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -79,24 +77,19 @@ builder.UseOrleans(siloBuilder =>
         });
     }
 });
-// Register SearchDesignTimeContext (which has all entity configurations) for migrations
-builder.Services.AddDbContext<SearchDesignTimeContext>(options =>
-{
-    options.UseNpgsql(connectionString, npgsql => npgsql.MigrationsAssembly("TGHarker.Identity.Silo"));
-});
-// Also register as PostgreSqlSearchContext for Orleans Search library compatibility
-builder.Services.AddScoped<PostgreSqlSearchContext>(sp => sp.GetRequiredService<SearchDesignTimeContext>());
-builder.Services.AddOrleansSearch().UsePostgreSql(connectionString);
+
+builder.Services.AddOrleansSearch()
+    .UsePostgreSql<SearchDesignTimeContext>(connectionString);
 
 var app = builder.Build();
 
 app.MapDefaultEndpoints();
 
-// Apply pending migrations for search database
+// Ensure search database schema is created
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<SearchDesignTimeContext>();
-    await dbContext.Database.MigrateAsync();
+    await dbContext.Database.EnsureCreatedAsync();
 }
 
 app.Run();

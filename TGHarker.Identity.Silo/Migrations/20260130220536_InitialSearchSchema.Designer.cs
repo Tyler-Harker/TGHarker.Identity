@@ -12,7 +12,7 @@ using TGHarker.Identity.Abstractions.Models.Generated;
 namespace TGHarker.Identity.Silo.Migrations
 {
     [DbContext(typeof(SearchDesignTimeContext))]
-    [Migration("20260130212347_InitialSearchSchema")]
+    [Migration("20260130220536_InitialSearchSchema")]
     partial class InitialSearchSchema
     {
         /// <inheritdoc />

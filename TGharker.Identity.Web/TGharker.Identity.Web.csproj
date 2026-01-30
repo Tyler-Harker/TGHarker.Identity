@@ -18,8 +18,8 @@
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.*" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.*" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="7.*" />
-    <PackageReference Include="TGHarker.Orleans.Search" Version="1.0.9" />
-    <PackageReference Include="TGHarker.Orleans.Search.PostgreSQL" Version="1.0.9" />
+    <PackageReference Include="TGHarker.Orleans.Search" Version="1.0.11" />
+    <PackageReference Include="TGHarker.Orleans.Search.PostgreSQL" Version="1.0.11" />
   </ItemGroup>
 
   <ItemGroup>

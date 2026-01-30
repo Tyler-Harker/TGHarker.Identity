@@ -1,6 +1,8 @@
 using Azure.Data.Tables;
+using Azure.Storage.Blobs;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
 using Orleans.Configuration;
 using TGharker.Identity.Web.Endpoints;
 using TGharker.Identity.Web.Middleware;
@@ -62,6 +64,26 @@ builder.Services.AddScoped<IOrganizationCreationService, OrganizationCreationSer
 builder.Services.AddSingleton<IOAuthCorsService, OAuthCorsService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddMemoryCache();
+
+// Configure Data Protection to persist keys across restarts
+var dataProtectionConnectionString = builder.Configuration.GetConnectionString("AzureStorage");
+if (!string.IsNullOrEmpty(dataProtectionConnectionString))
+{
+    var blobServiceClient = new BlobServiceClient(dataProtectionConnectionString);
+    var containerClient = blobServiceClient.GetBlobContainerClient("dataprotection-keys");
+    containerClient.CreateIfNotExists();
+    var blobClient = containerClient.GetBlobClient("keys.xml");
+
+    builder.Services.AddDataProtection()
+        .SetApplicationName("TGHarker.Identity")
+        .PersistKeysToAzureBlobStorage(blobClient);
+}
+else
+{
+    // Development fallback - keys stored in memory (will be lost on restart)
+    builder.Services.AddDataProtection()
+        .SetApplicationName("TGHarker.Identity");
+}
 
 // Authentication - support both cookies (for Razor Pages), JWT Bearer (for API), and SuperAdmin
 builder.Services.AddAuthentication(options =>

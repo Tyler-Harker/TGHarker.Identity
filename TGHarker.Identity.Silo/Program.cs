@@ -1,6 +1,7 @@
 using System.Net;
 using Azure.Data.Tables;
 using Azure.Storage.Blobs;
+using Microsoft.EntityFrameworkCore;
 using Orleans.Configuration;
 using TGHarker.Identity.Abstractions.Models.Generated;
 using TGHarker.Orleans.Search.Orleans.Extensions;
@@ -78,19 +79,22 @@ builder.UseOrleans(siloBuilder =>
         });
     }
 });
-// Aspire registers the PostgreSqlSearchContext via AddNpgsqlDbContext
-builder.AddNpgsqlDbContext<PostgreSqlSearchContext>("searchdb-identity");
+// Register PostgreSqlSearchContext with migrations assembly specified
+builder.AddNpgsqlDbContext<PostgreSqlSearchContext>("searchdb-identity", configureDbContextOptions: options =>
+{
+    options.UseNpgsql(npgsql => npgsql.MigrationsAssembly("TGHarker.Identity.Silo"));
+});
 builder.Services.AddOrleansSearch().UsePostgreSql(connectionString);
 
 var app = builder.Build();
 
 app.MapDefaultEndpoints();
 
-// Ensure search database is created/migrated
+// Apply pending migrations for search database
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<PostgreSqlSearchContext>();
-    await dbContext.Database.EnsureCreatedAsync();
+    await dbContext.Database.MigrateAsync();
 }
 
 app.Run();

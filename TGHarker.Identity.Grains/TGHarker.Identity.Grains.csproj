@@ -9,9 +9,9 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Orleans.Sdk" Version="10.*" />
     <PackageReference Include="Microsoft.Orleans.Persistence.AzureStorage" Version="10.*" />
-    <PackageReference Include="TGHarker.Orleans.Search" Version="1.0.8" />
-    <PackageReference Include="TGHarker.Orleans.Search.PostgreSQL" Version="1.0.8" />
-    <PackageReference Include="TGHarker.Orleans.Search.SourceGenerator" Version="1.0.8" OutputItemType="Analyzer" ReferenceOutputAssembly="false">
+    <PackageReference Include="TGHarker.Orleans.Search" Version="1.0.9" />
+    <PackageReference Include="TGHarker.Orleans.Search.PostgreSQL" Version="1.0.9" />
+    <PackageReference Include="TGHarker.Orleans.Search.SourceGenerator" Version="1.0.9" OutputItemType="Analyzer" ReferenceOutputAssembly="false">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>

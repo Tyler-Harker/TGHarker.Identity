@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="Aspire.Azure.Data.Tables" Version="13.1.0" />
+    <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" Version="1.*" />
     <PackageReference Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" Version="13.1.0" />
     <PackageReference Include="Microsoft.Orleans.Client" Version="10.*" />
     <PackageReference Include="Microsoft.Orleans.Clustering.AzureStorage" Version="10.*" />
@@ -17,8 +18,8 @@
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.*" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.*" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="7.*" />
-    <PackageReference Include="TGHarker.Orleans.Search" Version="1.0.8" />
-    <PackageReference Include="TGHarker.Orleans.Search.PostgreSQL" Version="1.0.8" />
+    <PackageReference Include="TGHarker.Orleans.Search" Version="1.0.9" />
+    <PackageReference Include="TGHarker.Orleans.Search.PostgreSQL" Version="1.0.9" />
   </ItemGroup>
 
   <ItemGroup>

@@ -14,9 +14,13 @@
     <PackageReference Include="Microsoft.Orleans.Clustering.AzureStorage" Version="10.*" />
     <PackageReference Include="Aspire.Azure.Storage.Blobs" Version="13.1.0" />
     <PackageReference Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" Version="13.1.0" />
-    <PackageReference Include="TGHarker.Orleans.Search" Version="1.0.8" />
-    <PackageReference Include="TGHarker.Orleans.Search.PostgreSQL" Version="1.0.8" />
-    <PackageReference Include="TGHarker.Orleans.Search.SourceGenerator" Version="1.0.8">
+    <PackageReference Include="TGHarker.Orleans.Search" Version="1.0.9" />
+    <PackageReference Include="TGHarker.Orleans.Search.PostgreSQL" Version="1.0.9" />
+    <PackageReference Include="TGHarker.Orleans.Search.SourceGenerator" Version="1.0.9">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.*">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>

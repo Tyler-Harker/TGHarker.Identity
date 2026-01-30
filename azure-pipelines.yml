@@ -114,6 +114,9 @@ stages:
               echo "##vso[task.prependpath]$HOME/.dotnet/tools"
             displayName: 'Install EF Core Tools'
 
+          - script: dotnet restore
+            displayName: 'Restore NuGet Packages'
+
           - script: |
               dotnet ef database update \
                 --project TGHarker.Identity.Silo/TGHarker.Identity.Silo.csproj \

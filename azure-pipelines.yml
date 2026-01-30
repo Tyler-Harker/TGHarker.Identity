@@ -120,9 +120,10 @@ stages:
           - script: |
               dotnet ef database update \
                 --project TGHarker.Identity.Silo/TGHarker.Identity.Silo.csproj \
-                --startup-project TGHarker.Identity.Silo/TGHarker.Identity.Silo.csproj \
-                --connection "$(POSTGRES_CONNECTION_STRING)"
+                --startup-project TGHarker.Identity.Silo/TGHarker.Identity.Silo.csproj
             displayName: 'Apply Migrations'
+            env:
+              CONNECTION_STRING: $(POSTGRES_CONNECTION_STRING)
 
   - stage: Deploy
     displayName: 'Deploy to Container Apps'

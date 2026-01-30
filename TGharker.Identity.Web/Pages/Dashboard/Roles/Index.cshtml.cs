@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using TGHarker.Identity.Abstractions.Grains;
 using TGHarker.Identity.Abstractions.Models;
@@ -19,6 +20,15 @@ public class IndexModel : PageModel
     }
 
     public List<RoleViewModel> Roles { get; set; } = [];
+
+    [BindProperty(SupportsGet = true)]
+    public int PageNumber { get; set; } = 1;
+
+    public int PageSize { get; set; } = 10;
+    public int TotalCount { get; set; }
+    public int TotalPages => (int)Math.Ceiling(TotalCount / (double)PageSize);
+    public bool HasPreviousPage => PageNumber > 1;
+    public bool HasNextPage => PageNumber < TotalPages;
 
     public class RoleViewModel
     {
@@ -70,7 +80,7 @@ public class IndexModel : PageModel
             }
         }
 
-        Roles = roles.Select(r => new RoleViewModel
+        var allRoles = roles.Select(r => new RoleViewModel
         {
             Id = r.Id,
             Name = r.Name,
@@ -83,5 +93,11 @@ public class IndexModel : PageModel
         .OrderByDescending(r => r.IsSystem)
         .ThenBy(r => r.Name)
         .ToList();
+
+        TotalCount = allRoles.Count;
+        Roles = allRoles
+            .Skip((PageNumber - 1) * PageSize)
+            .Take(PageSize)
+            .ToList();
     }
 }

@@ -120,6 +120,7 @@ app.UseOAuthCors();
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseSessionValidation();
 app.UseTenantRequired();
 
 // Map OAuth2/OIDC endpoints
@@ -131,6 +132,7 @@ app.MapRevocationEndpoint();
 app.MapIntrospectionEndpoint();
 app.MapTenantEndpoints();
 app.MapStatsEndpoint();
+app.MapThemeEndpoint();
 
 // Map Razor Pages
 app.MapStaticAssets();

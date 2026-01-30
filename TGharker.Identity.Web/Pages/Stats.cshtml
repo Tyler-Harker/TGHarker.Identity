@@ -23,7 +23,7 @@
 <section class="features-section">
     <div class="container">
         <div class="row g-4 justify-content-center">
-            <div class="col-md-6 col-lg-4">
+            <div class="col-md-6 col-lg-3">
                 <div class="feature-card text-center">
                     <div class="feature-icon bg-primary-subtle text-primary mx-auto">
                         <i class="bi bi-people-fill"></i>
@@ -33,7 +33,7 @@
                     <p>Total active users on the platform</p>
                 </div>
             </div>
-            <div class="col-md-6 col-lg-4">
+            <div class="col-md-6 col-lg-3">
                 <div class="feature-card text-center">
                     <div class="feature-icon bg-success-subtle text-success mx-auto">
                         <i class="bi bi-building"></i>
@@ -43,7 +43,17 @@
                     <p>Active tenants using our services</p>
                 </div>
             </div>
-            <div class="col-md-6 col-lg-4">
+            <div class="col-md-6 col-lg-3">
+                <div class="feature-card text-center">
+                    <div class="feature-icon bg-warning-subtle text-warning mx-auto">
+                        <i class="bi bi-app-indicator"></i>
+                    </div>
+                    <h2 class="stats-number">@Model.Stats.ActiveApplications.ToString("N0")</h2>
+                    <h4>Active Applications</h4>
+                    <p>OAuth clients registered on the platform</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
                 <div class="feature-card text-center">
                     <div class="feature-icon bg-info-subtle text-info mx-auto">
                         <i class="bi bi-graph-up-arrow"></i>

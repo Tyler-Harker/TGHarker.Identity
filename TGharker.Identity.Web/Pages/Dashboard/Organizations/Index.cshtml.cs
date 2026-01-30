@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using TGHarker.Identity.Abstractions.Grains;
 using TGHarker.Identity.Abstractions.Models;
@@ -20,7 +21,15 @@ public class IndexModel : PageModel
     }
 
     public List<OrganizationViewModel> Organizations { get; set; } = [];
+
+    [BindProperty(SupportsGet = true)]
+    public int PageNumber { get; set; } = 1;
+
+    public int PageSize { get; set; } = 10;
     public int TotalCount { get; set; }
+    public int TotalPages => (int)Math.Ceiling(TotalCount / (double)PageSize);
+    public bool HasPreviousPage => PageNumber > 1;
+    public bool HasNextPage => PageNumber < TotalPages;
 
     public class OrganizationViewModel
     {
@@ -43,12 +52,17 @@ public class IndexModel : PageModel
 
         var tenantId = GetTenantId();
 
-        // Search for active organizations in this tenant
+        // Get total count for pagination
+        TotalCount = await _clusterClient.Search<IOrganizationGrain>()
+            .Where(o => o.TenantId == tenantId && o.IsActive)
+            .CountAsync();
+
+        // Search for active organizations in this tenant with pagination
         var organizationGrains = await _clusterClient.Search<IOrganizationGrain>()
             .Where(o => o.TenantId == tenantId && o.IsActive)
+            .Skip((PageNumber - 1) * PageSize)
+            .Take(PageSize)
             .ToListAsync();
-
-        TotalCount = organizationGrains.Count;
 
         foreach (var orgGrain in organizationGrains)
         {

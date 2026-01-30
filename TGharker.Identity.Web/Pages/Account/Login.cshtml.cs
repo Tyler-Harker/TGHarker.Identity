@@ -37,6 +37,7 @@ public class LoginModel : PageModel
     public string? TenantIdentifier { get; set; }
 
     public string? ErrorMessage { get; set; }
+    public string? SessionMessage { get; set; }
 
     public class InputModel
     {
@@ -55,6 +56,14 @@ public class LoginModel : PageModel
     {
         // Clear existing authentication
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+
+        // Check for session message from middleware
+        if (Request.Cookies.TryGetValue("session_message", out var message))
+        {
+            SessionMessage = message;
+            Response.Cookies.Delete("session_message");
+        }
+
         return Page();
     }
 

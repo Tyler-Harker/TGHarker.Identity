@@ -87,6 +87,7 @@ public sealed class PlatformStats
     public long TotalUsers { get; set; }
     public long TotalTenants { get; set; }
     public long MonthlyActiveUsers { get; set; }
+    public long ActiveApplications { get; set; }
     public DateTime GeneratedAt { get; set; }
 }
 
@@ -339,7 +340,7 @@ public class GrainSearchService : IGrainSearchService
         {
             var thirtyDaysAgo = DateTime.UtcNow.AddDays(-30);
 
-            // Execute user and tenant count queries in parallel
+            // Execute count queries in parallel
             var totalUsersTask = _clusterClient.Search<IUserGrain>()
                 .Where(u => u.IsActive)
                 .CountAsync();
@@ -348,13 +349,17 @@ public class GrainSearchService : IGrainSearchService
                 .Where(t => t.IsActive)
                 .CountAsync();
 
+            var activeApplicationsTask = _clusterClient.Search<IClientGrain>()
+                .Where(c => c.IsActive)
+                .CountAsync();
+
             // For MAU, we need to fetch active users and filter by LastLoginAt
             // since LastLoginAt is queryable but may need index rebuild
             var activeUsersTask = _clusterClient.Search<IUserGrain>()
                 .Where(u => u.IsActive)
                 .ToListAsync();
 
-            await Task.WhenAll(totalUsersTask, totalTenantsTask, activeUsersTask);
+            await Task.WhenAll(totalUsersTask, totalTenantsTask, activeApplicationsTask, activeUsersTask);
 
             // Calculate MAU by checking LastLoginAt on each user
             var activeUsers = await activeUsersTask;
@@ -373,6 +378,7 @@ public class GrainSearchService : IGrainSearchService
                 TotalUsers = await totalUsersTask,
                 TotalTenants = await totalTenantsTask,
                 MonthlyActiveUsers = mauCount,
+                ActiveApplications = await activeApplicationsTask,
                 GeneratedAt = DateTime.UtcNow
             };
         }

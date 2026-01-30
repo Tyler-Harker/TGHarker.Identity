@@ -84,19 +84,25 @@
 <section class="stats-section py-5">
     <div class="container">
         <div class="row g-4 justify-content-center text-center">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="stat-item">
                     <h2 class="stat-number text-primary">@Model.Stats.TotalUsers.ToString("N0")</h2>
                     <p class="stat-label text-muted mb-0">Registered Users</p>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="stat-item">
                     <h2 class="stat-number text-success">@Model.Stats.TotalTenants.ToString("N0")</h2>
                     <p class="stat-label text-muted mb-0">Organizations</p>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
+                <div class="stat-item">
+                    <h2 class="stat-number text-warning">@Model.Stats.ActiveApplications.ToString("N0")</h2>
+                    <p class="stat-label text-muted mb-0">Active Applications</p>
+                </div>
+            </div>
+            <div class="col-md-3">
                 <div class="stat-item">
                     <h2 class="stat-number text-info">@Model.Stats.MonthlyActiveUsers.ToString("N0")</h2>
                     <p class="stat-label text-muted mb-0">Monthly Active Users</p>

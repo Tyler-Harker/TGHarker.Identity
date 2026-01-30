@@ -44,6 +44,7 @@ public class IndexModel : PageModel
 
     public string? ErrorMessage { get; set; }
     public string? SuccessMessage { get; set; }
+    public string? SessionMessage { get; set; }
 
     public class TenantInfo
     {
@@ -62,6 +63,13 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnGetAsync()
     {
+        // Check for session message from middleware
+        if (Request.Cookies.TryGetValue("session_message", out var message))
+        {
+            SessionMessage = message;
+            Response.Cookies.Delete("session_message");
+        }
+
         // Check if user already has a tenant selected (full session)
         var existingTenantId = User.FindFirst("tenant_id")?.Value;
         if (!string.IsNullOrEmpty(existingTenantId))

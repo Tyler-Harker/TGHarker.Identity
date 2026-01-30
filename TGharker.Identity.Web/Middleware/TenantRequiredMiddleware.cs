@@ -7,6 +7,9 @@ public class TenantRequiredMiddleware
 
     private static readonly HashSet<string> AllowedPaths = new(StringComparer.OrdinalIgnoreCase)
     {
+        "/",
+        "/index",
+        "/stats",
         "/tenants",
         "/account/login",
         "/account/logout",
@@ -23,6 +26,7 @@ public class TenantRequiredMiddleware
     [
         "/tenants/",
         "/tenant/",  // Tenant-specific auth pages
+        "/docs/",    // Public documentation pages
         "/.well-known/",
         "/connect/",
         "/api/",
@@ -30,7 +34,8 @@ public class TenantRequiredMiddleware
         "/_blazor/",
         "/lib/",
         "/css/",
-        "/js/"
+        "/js/",
+        "/images/"
     ];
 
     public TenantRequiredMiddleware(RequestDelegate next, ILogger<TenantRequiredMiddleware> logger)

@@ -79,11 +79,13 @@ builder.UseOrleans(siloBuilder =>
         });
     }
 });
-// Register PostgreSqlSearchContext with migrations assembly specified
-builder.AddNpgsqlDbContext<PostgreSqlSearchContext>("searchdb-identity", configureDbContextOptions: options =>
+// Register SearchDesignTimeContext (which has all entity configurations) for migrations
+builder.Services.AddDbContext<SearchDesignTimeContext>(options =>
 {
-    options.UseNpgsql(npgsql => npgsql.MigrationsAssembly("TGHarker.Identity.Silo"));
+    options.UseNpgsql(connectionString, npgsql => npgsql.MigrationsAssembly("TGHarker.Identity.Silo"));
 });
+// Also register as PostgreSqlSearchContext for Orleans Search library compatibility
+builder.Services.AddScoped<PostgreSqlSearchContext>(sp => sp.GetRequiredService<SearchDesignTimeContext>());
 builder.Services.AddOrleansSearch().UsePostgreSql(connectionString);
 
 var app = builder.Build();
@@ -93,7 +95,7 @@ app.MapDefaultEndpoints();
 // Apply pending migrations for search database
 using (var scope = app.Services.CreateScope())
 {
-    var dbContext = scope.ServiceProvider.GetRequiredService<PostgreSqlSearchContext>();
+    var dbContext = scope.ServiceProvider.GetRequiredService<SearchDesignTimeContext>();
     await dbContext.Database.MigrateAsync();
 }
 

@@ -10,6 +10,13 @@
             <div class="card-body p-4">
                 <h2 class="card-title text-center mb-4">Sign In</h2>
 
+                @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+                {
+                    <div class="alert alert-success" role="alert">
+                        <i class="bi bi-check-circle me-2"></i>@Model.SuccessMessage
+                    </div>
+                }
+
                 @if (!string.IsNullOrEmpty(Model.SessionMessage))
                 {
                     <div class="alert alert-warning" role="alert">

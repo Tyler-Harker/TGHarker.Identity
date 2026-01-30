@@ -31,7 +31,7 @@ var customDomain = builder.AddParameter("customDomain", value: "identity.harker.
 var certificateName = builder.AddParameter("certificateName", value: "identity.harker.dev-envnizco-260128040623", publishValueAsDefault: true);
 
 // SuperAdmin credentials (secret in production, default for dev)
-var devSuperAdminPassword = "SuperAdmin123!";
+var devSuperAdminPassword = "admin";
 var superAdminUsername = builder.AddParameter("superAdminUsername", value: "admin", publishValueAsDefault: false);
 var superAdminPassword = builder.Environment.IsDevelopment()
     ? builder.AddParameter("superAdminPassword", value: devSuperAdminPassword, publishValueAsDefault: false)

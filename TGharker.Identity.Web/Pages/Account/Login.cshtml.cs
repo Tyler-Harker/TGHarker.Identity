@@ -36,8 +36,18 @@ public class LoginModel : PageModel
     [BindProperty(SupportsGet = true, Name = "tenant")]
     public string? TenantIdentifier { get; set; }
 
+    [BindProperty(SupportsGet = true)]
+    public bool Registered { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public bool Joined { get; set; }
+
+    [BindProperty(SupportsGet = true, Name = "joined_org")]
+    public bool JoinedOrg { get; set; }
+
     public string? ErrorMessage { get; set; }
     public string? SessionMessage { get; set; }
+    public string? SuccessMessage { get; set; }
 
     public class InputModel
     {
@@ -62,6 +72,23 @@ public class LoginModel : PageModel
         {
             SessionMessage = message;
             Response.Cookies.Delete("session_message");
+        }
+
+        // Set success message for registration
+        if (Registered)
+        {
+            if (Joined)
+            {
+                SuccessMessage = "Your account has been created and you've joined the organization. Please sign in.";
+            }
+            else if (JoinedOrg)
+            {
+                SuccessMessage = "Your account has been created and you've joined the organization. Please sign in.";
+            }
+            else
+            {
+                SuccessMessage = "Your account has been created successfully. Please sign in.";
+            }
         }
 
         return Page();

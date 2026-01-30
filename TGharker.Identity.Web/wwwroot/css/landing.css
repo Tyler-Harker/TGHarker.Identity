@@ -1,7 +1,24 @@
 /* Landing Page Styles */
 
+html {
+    height: 100%;
+}
+
 body {
     padding-top: 76px; /* Account for fixed navbar */
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    margin: 0;
+}
+
+main {
+    flex: 1 0 auto;
+}
+
+.landing-footer {
+    flex-shrink: 0;
+    margin-top: auto;
 }
 
 /* Hero Section */

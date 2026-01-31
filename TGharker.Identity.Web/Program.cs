@@ -98,7 +98,7 @@ builder.Services.AddAuthentication(options =>
         options.Cookie.Name = "TGHarker.Identity.Session";
         options.Cookie.HttpOnly = true;
         options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-        options.ExpireTimeSpan = TimeSpan.FromHours(8);
+        options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
         options.SlidingExpiration = true;
     })
     .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>

@@ -127,7 +127,7 @@ public static class AuthorizeEndpoint
         {
             // Check for existing grant
             // For now, always redirect to consent if required
-            var consentUrl = $"/Consent?client_id={clientId}&scope={HttpUtility.UrlEncode(scope)}&redirect_uri={HttpUtility.UrlEncode(redirectUri)}&state={state}&nonce={nonce}&code_challenge={codeChallenge}&code_challenge_method={codeChallengeMethod}&response_mode={responseMode}&tenant={tenant.Identifier}";
+            var consentUrl = $"/tenant/{tenant.Identifier}/consent?client_id={clientId}&scope={HttpUtility.UrlEncode(scope)}&redirect_uri={HttpUtility.UrlEncode(redirectUri)}&state={state}&nonce={nonce}&code_challenge={codeChallenge}&code_challenge_method={codeChallengeMethod}&response_mode={responseMode}";
             return Results.Redirect(consentUrl);
         }
 

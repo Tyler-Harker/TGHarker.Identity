@@ -45,8 +45,9 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true, Name = "response_mode")]
     public string? ResponseMode { get; set; }
 
-    [BindProperty(SupportsGet = true, Name = "tenant")]
-    public string? TenantIdentifier { get; set; }
+    // Route parameter: /tenant/{tenantId}/consent
+    [BindProperty(SupportsGet = true)]
+    public string? TenantId { get; set; }
 
     public string? ClientName { get; set; }
     public string? ClientLogoUri { get; set; }

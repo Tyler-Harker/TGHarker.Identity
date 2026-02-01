@@ -122,8 +122,9 @@ public class LoginModel : TenantAuthPageModel
         var userFlow = await _userFlowService.ResolveUserFlowFromReturnUrlAsync(Tenant.Id, ReturnUrl);
 
         Logger.LogInformation(
-            "User {UserId} login - UserFlow: OrganizationsEnabled={OrganizationsEnabled}, Mode={Mode}, ReturnUrl={ReturnUrl}",
-            userId, userFlow?.OrganizationsEnabled, userFlow?.OrganizationMode, ReturnUrl);
+            "User {UserId} login - TenantId={TenantId}, UserFlow resolved: {UserFlowResolved}, OrganizationsEnabled={OrganizationsEnabled}, Mode={Mode}",
+            userId, Tenant.Id, userFlow != null, userFlow?.OrganizationsEnabled, userFlow?.OrganizationMode);
+        Logger.LogDebug("ReturnUrl for UserFlow resolution: {ReturnUrl}", ReturnUrl);
 
         if (userFlow?.OrganizationsEnabled == true &&
             userFlow.OrganizationMode != OrganizationRegistrationMode.None)

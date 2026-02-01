@@ -74,7 +74,113 @@ builder.Services.AddScoped<IUserFlowService, UserFlowService>();
 builder.Services.AddScoped<IOrganizationCreationService, OrganizationCreationService>();
 builder.Services.AddSingleton<IOAuthCorsService, OAuthCorsService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
+builder.Services.AddSingleton<ITenantSigningKeyResolver, TenantSigningKeyResolver>();
 builder.Services.AddMemoryCache();
+
+// Configure JWT bearer options with dynamic tenant-based signing key resolution
+builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+    .Configure<IClusterClient>((options, clusterClient) =>
+    {
+        // Disable claim type remapping so "sub" stays as "sub" (not remapped to NameIdentifier)
+        // and "tenant_id" stays as "tenant_id"
+        options.MapInboundClaims = false;
+
+        options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+        {
+            ValidateIssuer = false, // We validate issuer host in OnTokenValidated event
+            ValidateAudience = false,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ClockSkew = TimeSpan.FromMinutes(1),
+            // Dynamically resolve signing keys based on the token's issuer (which contains tenant info)
+            IssuerSigningKeyResolver = (token, securityToken, kid, validationParameters) =>
+            {
+                // Extract tenant identifier from issuer (format: https://host/tenant/{tenantId})
+                var issuer = securityToken.Issuer;
+                var tenantId = ExtractTenantIdFromIssuer(issuer);
+
+                if (string.IsNullOrEmpty(tenantId))
+                {
+                    return [];
+                }
+
+                // Get signing keys from the tenant's grain
+                // Note: This uses blocking wait because IssuerSigningKeyResolver is synchronous
+                var signingKeyGrain = clusterClient.GetGrain<TGHarker.Identity.Abstractions.Grains.ISigningKeyGrain>($"{tenantId}/signing-keys");
+                var publicKeys = signingKeyGrain.GetPublicKeysAsync().GetAwaiter().GetResult();
+
+                var securityKeys = new List<Microsoft.IdentityModel.Tokens.SecurityKey>();
+                foreach (var key in publicKeys)
+                {
+                    try
+                    {
+                        var rsa = System.Security.Cryptography.RSA.Create();
+                        rsa.ImportFromPem(key.PublicKeyPem);
+                        securityKeys.Add(new Microsoft.IdentityModel.Tokens.RsaSecurityKey(rsa) { KeyId = key.KeyId });
+                    }
+                    catch
+                    {
+                        // Skip invalid keys
+                    }
+                }
+
+                return securityKeys;
+            }
+        };
+
+        // Validate that the token's issuer host matches the current request host
+        // This prevents accepting tokens from other identity servers
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = context =>
+            {
+                var issuer = context.Principal?.FindFirst("iss")?.Value;
+                if (string.IsNullOrEmpty(issuer))
+                {
+                    context.Fail("Token is missing issuer claim");
+                    return Task.CompletedTask;
+                }
+
+                // Parse the issuer URI and validate the host matches the current request
+                if (!Uri.TryCreate(issuer, UriKind.Absolute, out var issuerUri))
+                {
+                    context.Fail("Invalid issuer format");
+                    return Task.CompletedTask;
+                }
+
+                var requestHost = context.HttpContext.Request.Host.Host;
+                var issuerHost = issuerUri.Host;
+
+                // Compare hosts (case-insensitive)
+                if (!string.Equals(requestHost, issuerHost, StringComparison.OrdinalIgnoreCase))
+                {
+                    context.Fail($"Issuer host '{issuerHost}' does not match request host '{requestHost}'");
+                    return Task.CompletedTask;
+                }
+
+                return Task.CompletedTask;
+            }
+        };
+    });
+
+static string? ExtractTenantIdFromIssuer(string? issuer)
+{
+    if (string.IsNullOrEmpty(issuer))
+        return null;
+
+    // Issuer format: https://host/tenant/{tenantId} or https://host/tenant/{tenantId}/
+    const string tenantSegment = "/tenant/";
+    var index = issuer.IndexOf(tenantSegment, StringComparison.OrdinalIgnoreCase);
+    if (index < 0)
+        return null;
+
+    var startIndex = index + tenantSegment.Length;
+    var endIndex = issuer.IndexOf('/', startIndex);
+
+    return endIndex > 0
+        ? issuer[startIndex..endIndex]
+        : issuer[startIndex..];
+}
 
 // Configure Data Protection to persist keys across restarts
 var dataProtectionConnectionString = builder.Configuration.GetConnectionString("AzureStorage");
@@ -112,17 +218,7 @@ builder.Services.AddAuthentication(options =>
         options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
         options.SlidingExpiration = true;
     })
-    .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
-    {
-        options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
-        {
-            ValidateIssuer = false, // Will be validated per-tenant
-            ValidateAudience = false,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = false, // Will be validated per-tenant
-            ClockSkew = TimeSpan.FromMinutes(1)
-        };
-    })
+    .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme)
     .AddCookie("SuperAdmin", options =>
     {
         options.LoginPath = "/Admin/Login";

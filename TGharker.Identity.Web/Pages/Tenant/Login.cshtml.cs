@@ -1,9 +1,11 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Cryptography;
+using System.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using TGHarker.Identity.Abstractions.Grains;
+using TGHarker.Identity.Abstractions.Models;
 using TGharker.Identity.Web.Services;
 
 namespace TGharker.Identity.Web.Pages.Tenant;
@@ -11,14 +13,17 @@ namespace TGharker.Identity.Web.Pages.Tenant;
 public class LoginModel : TenantAuthPageModel
 {
     private readonly ISessionService _sessionService;
+    private readonly IUserFlowService _userFlowService;
 
     public LoginModel(
         IClusterClient clusterClient,
         ISessionService sessionService,
+        IUserFlowService userFlowService,
         ILogger<LoginModel> logger)
         : base(clusterClient, logger)
     {
         _sessionService = sessionService;
+        _userFlowService = userFlowService;
     }
 
     [BindProperty]
@@ -110,6 +115,29 @@ public class LoginModel : TenantAuthPageModel
         {
             ErrorMessage = "You are not a member of this organization.";
             return Page();
+        }
+
+        // Check if user needs to set up an organization based on client's UserFlow settings
+        var userFlow = await _userFlowService.ResolveUserFlowFromReturnUrlAsync(Tenant.Id, ReturnUrl);
+        if (userFlow?.OrganizationsEnabled == true &&
+            userFlow.OrganizationMode != OrganizationRegistrationMode.None)
+        {
+            // Check if user already has an organization in this tenant
+            var userOrgs = user.OrganizationMemberships
+                .Where(m => m.TenantId == Tenant.Id)
+                .ToList();
+
+            if (userOrgs.Count == 0)
+            {
+                // User needs to set up an organization - create session first so they're authenticated
+                await _sessionService.CompleteSessionAsync(HttpContext, userId, user, Tenant.Id, Input.RememberMe);
+
+                Logger.LogInformation("User {UserId} logged in but needs organization setup", userId);
+
+                // Redirect to organization setup page
+                var setupUrl = $"/tenant/{TenantId}/setup-organization?returnUrl={HttpUtility.UrlEncode(ReturnUrl)}";
+                return Redirect(setupUrl);
+            }
         }
 
         // Create complete session with this tenant

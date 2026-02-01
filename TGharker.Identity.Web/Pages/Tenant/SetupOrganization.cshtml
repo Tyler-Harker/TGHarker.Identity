@@ -1,0 +1,79 @@
+@page "/tenant/{tenantId}/setup-organization"
+@model TGharker.Identity.Web.Pages.Tenant.SetupOrganizationModel
+@using TGHarker.Identity.Abstractions.Models
+@{
+    ViewData["Title"] = "Set Up Organization";
+}
+
+<div class="text-center mb-4">
+    <i class="bi bi-building display-4 text-primary"></i>
+    <h4 class="mt-3">Set Up Your Organization</h4>
+    <p class="text-muted">
+        @if (Model.UserFlow?.OrganizationMode == OrganizationRegistrationMode.OptionalPrompt)
+        {
+            <text>Create an organization to get started, or skip this step.</text>
+        }
+        else
+        {
+            <text>Create an organization to continue using this application.</text>
+        }
+    </p>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-danger" role="alert">
+        <i class="bi bi-exclamation-triangle me-2"></i>@Model.ErrorMessage
+    </div>
+}
+
+<form method="post">
+    <input type="hidden" asp-for="TenantId" />
+    <input type="hidden" asp-for="ReturnUrl" />
+
+    <div class="mb-3">
+        <label asp-for="Input.OrganizationName" class="form-label">
+            @(Model.UserFlow?.OrganizationNameLabel ?? "Organization Name")
+            @if (Model.UserFlow?.OrganizationMode == OrganizationRegistrationMode.Prompt &&
+                 Model.UserFlow?.RequireOrganizationName == true)
+            {
+                <span class="text-danger">*</span>
+            }
+        </label>
+        <input asp-for="Input.OrganizationName" class="form-control"
+               placeholder="@(Model.UserFlow?.OrganizationNamePlaceholder ?? "Acme Inc.")" autofocus />
+        <span asp-validation-for="Input.OrganizationName" class="text-danger small"></span>
+        @if (!string.IsNullOrEmpty(Model.UserFlow?.OrganizationHelpText))
+        {
+            <div class="form-text">@Model.UserFlow.OrganizationHelpText</div>
+        }
+    </div>
+
+    <div class="mb-4">
+        <label asp-for="Input.OrganizationIdentifier" class="form-label">
+            Organization Identifier
+            <span class="text-muted">(optional)</span>
+        </label>
+        <input asp-for="Input.OrganizationIdentifier" class="form-control"
+               placeholder="acme-inc" />
+        <span asp-validation-for="Input.OrganizationIdentifier" class="text-danger small"></span>
+        <div class="form-text">A URL-friendly identifier. If not provided, one will be generated from the name.</div>
+    </div>
+
+    <div class="d-grid gap-2">
+        <button type="submit" class="btn btn-tenant-primary btn-lg">
+            <i class="bi bi-plus-circle me-2"></i>Create Organization
+        </button>
+
+        @if (Model.UserFlow?.OrganizationMode == OrganizationRegistrationMode.OptionalPrompt)
+        {
+            <a href="@(Model.ReturnUrl ?? "/Dashboard")" class="btn btn-outline-secondary">
+                Skip for now
+            </a>
+        }
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

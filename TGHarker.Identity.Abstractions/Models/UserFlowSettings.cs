@@ -42,6 +42,13 @@ public sealed class UserFlowSettings
     /// Custom help text displayed below the organization name field.
     /// </summary>
     [Id(6)] public string? OrganizationHelpText { get; set; }
+
+    /// <summary>
+    /// The default tenant role assigned to users who register through this client.
+    /// Defaults to "guest" - guests have no tenant-level privileges and only have
+    /// access within their organizations for the applications they use.
+    /// </summary>
+    [Id(7)] public string DefaultTenantRole { get; set; } = WellKnownRoles.Guest;
 }
 
 /// <summary>

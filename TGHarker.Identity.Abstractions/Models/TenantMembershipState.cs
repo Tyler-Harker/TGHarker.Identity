@@ -39,6 +39,13 @@ public static class WellKnownRoles
     public const string TenantAdmin = "tenant_admin";
     public const string TenantOwner = "tenant_owner";
     public const string User = "user";
+
+    /// <summary>
+    /// Guest role for users who sign up through client applications.
+    /// Guests have no tenant-level privileges - they only have access
+    /// within their organizations for the applications they use.
+    /// </summary>
+    public const string Guest = "guest";
 }
 
 [GenerateSerializer]

@@ -105,4 +105,21 @@ public sealed class TenantResolver : ITenantResolver
 
         return null;
     }
+
+    public string GetIssuerUrl(HttpContext context, TenantState tenant)
+    {
+        var scheme = context.Request.Scheme;
+        var host = context.Request.Host;
+
+        // Check if tenant was resolved via subdomain
+        var subdomain = ExtractSubdomain(host.Host);
+        if (!string.IsNullOrEmpty(subdomain) && subdomain.Equals(tenant.Identifier, StringComparison.OrdinalIgnoreCase))
+        {
+            // Subdomain-based: issuer is just the host (no path prefix)
+            return $"{scheme}://{host}";
+        }
+
+        // Path-based: always use /tenant/{identifier} format for consistency
+        return $"{scheme}://{host}/tenant/{tenant.Identifier}";
+    }
 }

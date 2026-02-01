@@ -13,4 +13,11 @@ public interface IRefreshTokenGrain : IGrainWithStringKey
     Task RevokeAsync();
     Task<bool> IsValidAsync();
     Task<RefreshTokenState?> GetStateAsync();
+
+    /// <summary>
+    /// Sets the hash of the token that replaced this one during rotation.
+    /// Used for token reuse detection - if someone tries to use a rotated token,
+    /// the entire token chain can be revoked to protect against stolen tokens.
+    /// </summary>
+    Task SetReplacementTokenAsync(string replacementTokenHash);
 }

@@ -75,9 +75,10 @@ public static class AuthorizeEndpoint
         if (!client.IsActive)
             return CreateErrorResponse(redirectUri, state, responseMode, "invalid_client", "Client is not active");
 
-        // Validate redirect URI
-        if (!await clientGrain.ValidateRedirectUriAsync(redirectUri))
-            return CreateErrorResponse(null, state, responseMode, "invalid_request", "Invalid redirect_uri");
+        // Validate redirect URI format and security
+        var uriValidation = RedirectUriValidator.ValidateForAuthorization(redirectUri, client.RedirectUris);
+        if (!uriValidation.IsValid)
+            return CreateErrorResponse(null, state, responseMode, "invalid_request", uriValidation.Error ?? "Invalid redirect_uri");
 
         // Validate grant type
         if (!await clientGrain.ValidateGrantTypeAsync(GrantTypes.AuthorizationCode))
@@ -87,8 +88,9 @@ public static class AuthorizeEndpoint
         if (client.RequirePkce && string.IsNullOrEmpty(codeChallenge))
             return CreateErrorResponse(redirectUri, state, responseMode, "invalid_request", "PKCE code_challenge is required");
 
-        if (!string.IsNullOrEmpty(codeChallenge) && codeChallengeMethod != "S256" && codeChallengeMethod != "plain")
-            return CreateErrorResponse(redirectUri, state, responseMode, "invalid_request", "Unsupported code_challenge_method");
+        // Only allow S256 PKCE method - "plain" provides no security benefit
+        if (!string.IsNullOrEmpty(codeChallenge) && codeChallengeMethod != "S256")
+            return CreateErrorResponse(redirectUri, state, responseMode, "invalid_request", "Only S256 code_challenge_method is supported");
 
         // Parse and validate scopes
         var requestedScopes = scope.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList();
@@ -102,6 +104,14 @@ public static class AuthorizeEndpoint
 
         if (requestedScopes.Contains(StandardScopes.OpenId) && !validScopes.Contains(StandardScopes.OpenId))
             return CreateErrorResponse(redirectUri, state, responseMode, "invalid_scope", "openid scope is not allowed for this client");
+
+        // Validate nonce for OpenID Connect flows
+        // Per OIDC spec, nonce is required for implicit flow (we only support code flow where it's optional but recommended)
+        if (requestedScopes.Contains(StandardScopes.OpenId) && string.IsNullOrEmpty(nonce))
+        {
+            var logger = context.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("AuthorizeEndpoint");
+            logger.LogWarning("OpenID Connect request without nonce for client {ClientId}. Nonce is recommended for replay protection.", clientId);
+        }
 
         // Check if user is authenticated
         var userId = context.User.FindFirst("sub")?.Value;
@@ -170,8 +180,8 @@ public static class AuthorizeEndpoint
             // Try to use default organization
             selectedOrgId = membership.DefaultOrganizationId;
 
-            // If no default and multiple orgs, redirect to org picker
-            if (string.IsNullOrEmpty(selectedOrgId) && userOrgs.Count > 1 && prompt != "none")
+            // If no default, always redirect to org picker (even for single org)
+            if (string.IsNullOrEmpty(selectedOrgId) && prompt != "none")
             {
                 // Use Uri.EscapeDataString to properly encode special characters like '+' as '%2B'
                 var orgPickerUrl = $"/tenant/{tenant.Identifier}/select-organization?" +
@@ -184,12 +194,6 @@ public static class AuthorizeEndpoint
                     $"&code_challenge_method={Uri.EscapeDataString(codeChallengeMethod ?? "")}" +
                     $"&response_mode={Uri.EscapeDataString(responseMode ?? "")}";
                 return Results.Redirect(orgPickerUrl);
-            }
-
-            // If only one org and no default, use that one
-            if (string.IsNullOrEmpty(selectedOrgId) && userOrgs.Count == 1)
-            {
-                selectedOrgId = userOrgs[0].OrganizationId;
             }
         }
 
@@ -273,17 +277,55 @@ public static class AuthorizeEndpoint
 
     private static IResult CreateSuccessRedirect(string redirectUri, Dictionary<string, string?> parameters, string responseMode)
     {
+        if (responseMode == "form_post")
+        {
+            return CreateFormPostResponse(redirectUri, parameters);
+        }
+
         var queryParams = string.Join("&",
             parameters.Where(p => p.Value != null).Select(p => $"{p.Key}={HttpUtility.UrlEncode(p.Value)}"));
 
         var finalUri = responseMode switch
         {
             "fragment" => $"{redirectUri}#{queryParams}",
-            "form_post" => redirectUri, // Would need form_post implementation
             _ => redirectUri.Contains('?') ? $"{redirectUri}&{queryParams}" : $"{redirectUri}?{queryParams}"
         };
 
         return Results.Redirect(finalUri);
+    }
+
+    private static IResult CreateFormPostResponse(string redirectUri, Dictionary<string, string?> parameters)
+    {
+        // Build hidden form fields
+        var hiddenFields = new StringBuilder();
+        foreach (var param in parameters.Where(p => p.Value != null))
+        {
+            var encodedValue = HttpUtility.HtmlEncode(param.Value);
+            hiddenFields.AppendLine($"<input type=\"hidden\" name=\"{param.Key}\" value=\"{encodedValue}\" />");
+        }
+
+        // Generate HTML page with auto-submitting form
+        var html = $"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Submitting...</title>
+            </head>
+            <body onload="document.forms[0].submit()">
+                <noscript>
+                    <p>JavaScript is required. Click the button below to continue.</p>
+                </noscript>
+                <form method="post" action="{HttpUtility.HtmlEncode(redirectUri)}">
+                    {hiddenFields}
+                    <noscript>
+                        <button type="submit">Continue</button>
+                    </noscript>
+                </form>
+            </body>
+            </html>
+            """;
+
+        return Results.Content(html, "text/html");
     }
 
     private static string GenerateSecureCode()

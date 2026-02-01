@@ -104,17 +104,15 @@ public sealed class AuthorizationCodeGrain : Grain, IAuthorizationCodeGrain
 
         string computedChallenge;
 
+        // Only S256 is supported - "plain" provides no security benefit
         if (codeChallengeMethod == "S256" || string.IsNullOrEmpty(codeChallengeMethod))
         {
             var hash = SHA256.HashData(Encoding.ASCII.GetBytes(codeVerifier));
             computedChallenge = Base64UrlEncoder.Encode(hash);
         }
-        else if (codeChallengeMethod == "plain")
-        {
-            computedChallenge = codeVerifier;
-        }
         else
         {
+            // Reject unsupported methods including "plain"
             return false;
         }
 

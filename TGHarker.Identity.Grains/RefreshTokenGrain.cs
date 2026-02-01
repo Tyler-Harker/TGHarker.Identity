@@ -27,9 +27,18 @@ public sealed class RefreshTokenGrain : Grain, IRefreshTokenGrain
 
     public async Task<RefreshTokenState?> ValidateAndRevokeAsync()
     {
-        // Check if already revoked
+        // Check if already revoked - potential token reuse attack
         if (_state.State.IsRevoked)
+        {
+            // If this token was replaced, someone is trying to reuse a rotated token
+            // This could indicate token theft - the replacement token chain should also be revoked
+            if (!string.IsNullOrEmpty(_state.State.ReplacedByTokenHash))
+            {
+                // Revoke the replacement token chain to protect against stolen tokens
+                await RevokeTokenChainAsync(_state.State.ReplacedByTokenHash);
+            }
             return null;
+        }
 
         // Check expiration
         if (_state.State.ExpiresAt < DateTime.UtcNow)
@@ -41,6 +50,30 @@ public sealed class RefreshTokenGrain : Grain, IRefreshTokenGrain
         await _state.WriteStateAsync();
 
         return _state.State;
+    }
+
+    public async Task SetReplacementTokenAsync(string replacementTokenHash)
+    {
+        _state.State.ReplacedByTokenHash = replacementTokenHash;
+        await _state.WriteStateAsync();
+    }
+
+    private async Task RevokeTokenChainAsync(string tokenHash)
+    {
+        // Revoke the replacement token and any tokens in its chain
+        var nextToken = GrainFactory.GetGrain<IRefreshTokenGrain>($"{_state.State.TenantId}/rt-{tokenHash}");
+        var nextState = await nextToken.GetStateAsync();
+
+        if (nextState != null && !nextState.IsRevoked)
+        {
+            await nextToken.RevokeAsync();
+
+            // Continue revoking the chain if there are more replacement tokens
+            if (!string.IsNullOrEmpty(nextState.ReplacedByTokenHash))
+            {
+                await RevokeTokenChainAsync(nextState.ReplacedByTokenHash);
+            }
+        }
     }
 
     public async Task RevokeAsync()

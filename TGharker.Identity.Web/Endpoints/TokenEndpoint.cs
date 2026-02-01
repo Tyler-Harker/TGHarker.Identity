@@ -76,11 +76,11 @@ public static class TokenEndpoint
             var result = grantType switch
             {
                 GrantTypes.AuthorizationCode => await HandleAuthorizationCodeAsync(
-                    context, tenant, client, form, tokenGenerator, clusterClient, logger),
+                    context, tenant, client, form, tokenGenerator, clusterClient, tenantResolver, logger),
                 GrantTypes.ClientCredentials => await HandleClientCredentialsAsync(
-                    context, tenant, client, form, tokenGenerator),
+                    context, tenant, client, form, tokenGenerator, tenantResolver),
                 GrantTypes.RefreshToken => await HandleRefreshTokenAsync(
-                    context, tenant, client, form, tokenGenerator, clusterClient),
+                    context, tenant, client, form, tokenGenerator, clusterClient, tenantResolver),
                 _ => TokenResult.Error("unsupported_grant_type", "The grant type is not supported")
             };
 
@@ -118,6 +118,7 @@ public static class TokenEndpoint
         IFormCollection form,
         IJwtTokenGenerator tokenGenerator,
         IClusterClient clusterClient,
+        ITenantResolver tenantResolver,
         ILogger logger)
     {
         var code = form["code"].FirstOrDefault();
@@ -176,8 +177,8 @@ public static class TokenEndpoint
         var membershipGrain = clusterClient.GetGrain<ITenantMembershipGrain>($"{tenant.Id}/member-{authCode.UserId}");
         var membership = await membershipGrain.GetStateAsync();
 
-        // Issuer must include tenant prefix to match discovery document
-        var baseUrl = $"{context.Request.Scheme}://{context.Request.Host}/tenant/{tenant.Identifier}";
+        // Use canonical issuer URL for consistency with discovery document
+        var baseUrl = tenantResolver.GetIssuerUrl(context, tenant);
         logger.LogInformation("Generating tokens with issuer: {Issuer}", baseUrl);
 
         // Build identity claims based on scopes
@@ -211,7 +212,8 @@ public static class TokenEndpoint
         string? refreshToken = null;
         if (authCode.Scopes.Contains(StandardScopes.OfflineAccess))
         {
-            refreshToken = await CreateRefreshTokenAsync(
+            // Initial token, not rotation - ignore the hash
+            (refreshToken, _) = await CreateRefreshTokenAsync(
                 tenant, client, authCode.UserId, authCode.Scopes, context, clusterClient);
         }
 
@@ -231,7 +233,8 @@ public static class TokenEndpoint
         TenantState tenant,
         ClientState client,
         IFormCollection form,
-        IJwtTokenGenerator tokenGenerator)
+        IJwtTokenGenerator tokenGenerator,
+        ITenantResolver tenantResolver)
     {
         if (!client.IsConfidential)
             return TokenResult.Error("unauthorized_client", "Client credentials grant requires a confidential client");
@@ -245,8 +248,8 @@ public static class TokenEndpoint
         // Validate scopes
         var validScopes = scopes.Where(s => client.AllowedScopes.Contains(s)).ToList();
 
-        // Issuer must include tenant prefix to match discovery document
-        var baseUrl = $"{context.Request.Scheme}://{context.Request.Host}/tenant/{tenant.Identifier}";
+        // Use canonical issuer URL for consistency with discovery document
+        var baseUrl = tenantResolver.GetIssuerUrl(context, tenant);
 
         var tokenContext = new TokenGenerationContext
         {
@@ -275,7 +278,8 @@ public static class TokenEndpoint
         ClientState client,
         IFormCollection form,
         IJwtTokenGenerator tokenGenerator,
-        IClusterClient clusterClient)
+        IClusterClient clusterClient,
+        ITenantResolver tenantResolver)
     {
         var refreshTokenValue = form["refresh_token"].FirstOrDefault();
         var requestedScope = form["scope"].FirstOrDefault();
@@ -308,8 +312,8 @@ public static class TokenEndpoint
             scopes = requestedScopes;
         }
 
-        // Issuer must include tenant prefix to match discovery document
-        var baseUrl = $"{context.Request.Scheme}://{context.Request.Host}/tenant/{tenant.Identifier}";
+        // Use canonical issuer URL for consistency with discovery document
+        var baseUrl = tenantResolver.GetIssuerUrl(context, tenant);
         Dictionary<string, string> identityClaims = [];
         Dictionary<string, string> additionalClaims = [];
 
@@ -350,8 +354,11 @@ public static class TokenEndpoint
             : null;
 
         // Create new refresh token (rotation)
-        var newRefreshToken = await CreateRefreshTokenAsync(
+        var (newRefreshToken, newTokenHash) = await CreateRefreshTokenAsync(
             tenant, client, tokenState.UserId, scopes, context, clusterClient);
+
+        // Link old token to new token for token reuse detection
+        await refreshTokenGrain.SetReplacementTokenAsync(newTokenHash);
 
         return TokenResult.Success(new TokenResponse
         {
@@ -364,7 +371,7 @@ public static class TokenEndpoint
         });
     }
 
-    private static async Task<string> CreateRefreshTokenAsync(
+    private static async Task<(string TokenValue, string TokenHash)> CreateRefreshTokenAsync(
         TenantState tenant,
         ClientState client,
         string? userId,
@@ -389,7 +396,7 @@ public static class TokenEndpoint
             UserAgent = context.Request.Headers.UserAgent.FirstOrDefault()
         });
 
-        return refreshTokenValue;
+        return (refreshTokenValue, tokenHash);
     }
 
     private static async Task<Dictionary<string, string>> BuildIdentityClaimsAsync(

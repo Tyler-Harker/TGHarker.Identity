@@ -64,9 +64,8 @@ public static class DiscoveryEndpoints
         if (tenant == null)
             return Results.NotFound(new { error = "tenant_not_found" });
 
-        // Check if tenant was resolved via path prefix (e.g., /{tenantId}/.well-known/...)
-        var tenantPrefix = GetTenantPathPrefix(context);
-        var baseUrl = $"{context.Request.Scheme}://{context.Request.Host}{tenantPrefix}";
+        // Use the canonical issuer URL for consistency across all endpoints
+        var baseUrl = tenantResolver.GetIssuerUrl(context, tenant);
 
         // Get supported scopes from tenant
         var scopeNames = new List<string> { "openid", "profile", "email", "phone", "offline_access" };

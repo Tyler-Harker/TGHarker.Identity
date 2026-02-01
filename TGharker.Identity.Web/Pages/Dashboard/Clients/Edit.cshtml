@@ -214,6 +214,15 @@
                             <div class="form-text">Role assigned to the user in their new organization.</div>
                         </div>
 
+                        <div class="mb-3">
+                            <label asp-for="Input.DefaultTenantRole" class="form-label">Default Tenant Role</label>
+                            <select asp-for="Input.DefaultTenantRole" class="form-select">
+                                <option value="@WellKnownRoles.Guest">Guest - Organization access only (Recommended)</option>
+                                <option value="@WellKnownRoles.User">User - Standard tenant member</option>
+                            </select>
+                            <div class="form-text">Tenant role for users who sign up through this application. Guests have no tenant-level privileges.</div>
+                        </div>
+
                         <div class="form-check mb-3">
                             <input asp-for="Input.RequireOrganizationName" class="form-check-input" />
                             <label asp-for="Input.RequireOrganizationName" class="form-check-label">

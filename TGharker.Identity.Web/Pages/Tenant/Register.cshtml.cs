@@ -215,13 +215,16 @@ public class RegisterModel : TenantAuthPageModel
         else
         {
             // No invitation - add user to this tenant directly
+            // Use the DefaultTenantRole from UserFlow settings (defaults to "guest" for client app signups)
+            var tenantRole = UserFlow?.DefaultTenantRole ?? WellKnownRoles.Guest;
             var membershipGrain = ClusterClient.GetGrain<ITenantMembershipGrain>($"{Tenant!.Id}/member-{userId}");
             await membershipGrain.CreateAsync(new CreateMembershipRequest
             {
                 UserId = userId,
                 TenantId = Tenant.Id,
-                Roles = [WellKnownRoles.User]
+                Roles = [tenantRole]
             });
+            Logger.LogInformation("User {UserId} registered with tenant role: {TenantRole}", userId, tenantRole);
 
             // Add tenant to user's memberships
             await userGrain.AddTenantMembershipAsync(Tenant.Id);

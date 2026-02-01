@@ -45,6 +45,9 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true, Name = "response_mode")]
     public string? ResponseMode { get; set; }
 
+    [BindProperty(SupportsGet = true, Name = "organization_id")]
+    public string? OrganizationId { get; set; }
+
     // Route parameter: /tenant/{tenantId}/consent
     [BindProperty(SupportsGet = true)]
     public string? TenantId { get; set; }
@@ -98,11 +101,18 @@ public class IndexModel : PageModel
 
         ClientName = client.ClientName ?? client.ClientId;
 
-        // Parse and load scopes
+        // Parse and load scopes, filtering to only those allowed for this client
         var requestedScopeNames = Scope.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
         foreach (var scopeName in requestedScopeNames)
         {
+            // Only show scopes that the client is allowed to request
+            if (!client.AllowedScopes.Contains(scopeName))
+            {
+                _logger.LogWarning("Scope {Scope} not allowed for client {ClientId}, not showing in consent", scopeName, ClientId);
+                continue;
+            }
+
             var scopeGrain = _clusterClient.GetGrain<IScopeGrain>($"{tenantId}/scope-{scopeName}");
             var scope = await scopeGrain.GetStateAsync();
 
@@ -158,14 +168,35 @@ public class IndexModel : PageModel
             return RedirectWithError("access_denied", "The user denied the request.");
         }
 
+        // Validate client exists and get allowed scopes
+        if (string.IsNullOrEmpty(ClientId))
+        {
+            return RedirectWithError("invalid_request", "Client ID is required.");
+        }
+
+        var clientGrain = _clusterClient.GetGrain<IClientGrain>($"{tenantId}/{ClientId}");
+        var client = await clientGrain.GetStateAsync();
+
+        if (client == null || !client.IsActive)
+        {
+            return RedirectWithError("invalid_client", "Client not found or inactive.");
+        }
+
         // User granted consent
         var requestedScopeNames = Scope?.Split(' ', StringSplitOptions.RemoveEmptyEntries) ?? [];
 
-        // Get required scopes that must be included
+        // Get required scopes that must be included, validating against client's allowed scopes
         var finalScopes = new List<string>();
 
         foreach (var scopeName in requestedScopeNames)
         {
+            // First, validate that the scope is allowed for this client
+            if (!client.AllowedScopes.Contains(scopeName))
+            {
+                _logger.LogWarning("Scope {Scope} not allowed for client {ClientId}, skipping", scopeName, ClientId);
+                continue;
+            }
+
             // Check if it's a standard required scope (like openid)
             var isStandardRequired = StandardScopes.TryGetValue(scopeName, out var standardScope) && standardScope.IsRequired;
 
@@ -207,7 +238,8 @@ public class IndexModel : PageModel
             Nonce = Nonce,
             State = State,
             CreatedAt = DateTime.UtcNow,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(tenant?.Configuration.AuthorizationCodeLifetimeMinutes ?? 5)
+            ExpiresAt = DateTime.UtcNow.AddMinutes(tenant?.Configuration.AuthorizationCodeLifetimeMinutes ?? 5),
+            SelectedOrganizationId = OrganizationId
         });
 
         _logger.LogInformation("User {UserId} granted consent for client {ClientId} with scopes {Scopes}",
@@ -242,10 +274,16 @@ public class IndexModel : PageModel
 
     private IActionResult BuildRedirect(Dictionary<string, string?> parameters)
     {
+        var mode = ResponseMode ?? "query";
+
+        if (mode == "form_post")
+        {
+            return CreateFormPostResponse(parameters);
+        }
+
         var queryParams = string.Join("&",
             parameters.Where(p => p.Value != null).Select(p => $"{p.Key}={HttpUtility.UrlEncode(p.Value)}"));
 
-        var mode = ResponseMode ?? "query";
         var finalUri = mode switch
         {
             "fragment" => $"{RedirectUri}#{queryParams}",
@@ -253,6 +291,40 @@ public class IndexModel : PageModel
         };
 
         return Redirect(finalUri);
+    }
+
+    private ContentResult CreateFormPostResponse(Dictionary<string, string?> parameters)
+    {
+        // Build hidden form fields
+        var hiddenFields = new System.Text.StringBuilder();
+        foreach (var param in parameters.Where(p => p.Value != null))
+        {
+            var encodedValue = HttpUtility.HtmlEncode(param.Value);
+            hiddenFields.AppendLine($"<input type=\"hidden\" name=\"{param.Key}\" value=\"{encodedValue}\" />");
+        }
+
+        // Generate HTML page with auto-submitting form
+        var html = $"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Submitting...</title>
+            </head>
+            <body onload="document.forms[0].submit()">
+                <noscript>
+                    <p>JavaScript is required. Click the button below to continue.</p>
+                </noscript>
+                <form method="post" action="{HttpUtility.HtmlEncode(RedirectUri)}">
+                    {hiddenFields}
+                    <noscript>
+                        <button type="submit">Continue</button>
+                    </noscript>
+                </form>
+            </body>
+            </html>
+            """;
+
+        return Content(html, "text/html");
     }
 
     private static string GenerateSecureCode()

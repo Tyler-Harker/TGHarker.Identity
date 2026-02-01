@@ -53,6 +53,7 @@ public class EditModel : PageModel
         public bool OrganizationsEnabled { get; set; }
         public OrganizationRegistrationMode OrganizationMode { get; set; }
         public string? DefaultOrganizationRole { get; set; }
+        public string DefaultTenantRole { get; set; } = WellKnownRoles.Guest;
         public bool RequireOrganizationName { get; set; } = true;
 
         [StringLength(50)]
@@ -111,6 +112,7 @@ public class EditModel : PageModel
             OrganizationsEnabled = userFlow.OrganizationsEnabled,
             OrganizationMode = userFlow.OrganizationMode,
             DefaultOrganizationRole = userFlow.DefaultOrganizationRole,
+            DefaultTenantRole = userFlow.DefaultTenantRole,
             RequireOrganizationName = userFlow.RequireOrganizationName,
             OrganizationNameLabel = userFlow.OrganizationNameLabel,
             OrganizationNamePlaceholder = userFlow.OrganizationNamePlaceholder,
@@ -178,6 +180,7 @@ public class EditModel : PageModel
                 OrganizationsEnabled = Input.OrganizationsEnabled,
                 OrganizationMode = Input.OrganizationMode,
                 DefaultOrganizationRole = Input.DefaultOrganizationRole,
+                DefaultTenantRole = Input.DefaultTenantRole,
                 RequireOrganizationName = Input.RequireOrganizationName,
                 OrganizationNameLabel = Input.OrganizationNameLabel?.Trim(),
                 OrganizationNamePlaceholder = Input.OrganizationNamePlaceholder?.Trim(),
@@ -185,8 +188,8 @@ public class EditModel : PageModel
             };
 
             _logger.LogInformation(
-                "Saving UserFlow settings for client {ClientId}: OrganizationsEnabled={OrganizationsEnabled}, Mode={Mode}",
-                id, userFlow.OrganizationsEnabled, userFlow.OrganizationMode);
+                "Saving UserFlow settings for client {ClientId}: OrganizationsEnabled={OrganizationsEnabled}, Mode={Mode}, DefaultTenantRole={DefaultTenantRole}",
+                id, userFlow.OrganizationsEnabled, userFlow.OrganizationMode, userFlow.DefaultTenantRole);
 
             // Determine client configuration based on application type
             var newIsConfidential = Input.ApplicationType == "server";

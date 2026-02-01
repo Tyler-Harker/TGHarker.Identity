@@ -120,6 +120,11 @@ public class LoginModel : TenantAuthPageModel
 
         // Check if user needs to set up an organization based on client's UserFlow settings
         var userFlow = await _userFlowService.ResolveUserFlowFromReturnUrlAsync(Tenant.Id, ReturnUrl);
+
+        Logger.LogInformation(
+            "User {UserId} login - UserFlow: OrganizationsEnabled={OrganizationsEnabled}, Mode={Mode}, ReturnUrl={ReturnUrl}",
+            userId, userFlow?.OrganizationsEnabled, userFlow?.OrganizationMode, ReturnUrl);
+
         if (userFlow?.OrganizationsEnabled == true &&
             userFlow.OrganizationMode != OrganizationRegistrationMode.None)
         {

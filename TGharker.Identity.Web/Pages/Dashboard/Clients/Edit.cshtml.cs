@@ -184,6 +184,10 @@ public class EditModel : PageModel
                 OrganizationHelpText = Input.OrganizationHelpText?.Trim()
             };
 
+            _logger.LogInformation(
+                "Saving UserFlow settings for client {ClientId}: OrganizationsEnabled={OrganizationsEnabled}, Mode={Mode}",
+                id, userFlow.OrganizationsEnabled, userFlow.OrganizationMode);
+
             // Determine client configuration based on application type
             var newIsConfidential = Input.ApplicationType == "server";
             var grantTypes = Input.ApplicationType switch

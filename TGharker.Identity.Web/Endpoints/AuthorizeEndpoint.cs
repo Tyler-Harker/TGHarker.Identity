@@ -137,6 +137,13 @@ public static class AuthorizeEndpoint
         {
             // Get client's UserFlow settings to see if organizations are required
             var userFlow = await clientGrain.GetUserFlowSettingsAsync();
+
+            // Log for debugging
+            var logger = context.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("AuthorizeEndpoint");
+            logger.LogInformation(
+                "User {UserId} has no organizations. UserFlow: OrganizationsEnabled={OrganizationsEnabled}, Mode={Mode}",
+                userId, userFlow?.OrganizationsEnabled, userFlow?.OrganizationMode);
+
             // Only redirect to setup for Prompt and AutoCreate modes
             // OptionalPrompt allows users to skip organization creation
             if (userFlow?.OrganizationsEnabled == true &&

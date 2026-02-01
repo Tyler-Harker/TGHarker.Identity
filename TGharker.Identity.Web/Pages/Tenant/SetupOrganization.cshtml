@@ -27,7 +27,8 @@
     </div>
 }
 
-<form method="post">
+@* Use multipart/form-data to prevent '+' from being interpreted as space *@
+<form method="post" enctype="multipart/form-data">
     <input type="hidden" asp-for="TenantId" />
     <input type="hidden" asp-for="ClientId" />
     <input type="hidden" asp-for="Scope" />

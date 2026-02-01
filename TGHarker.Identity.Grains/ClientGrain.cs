@@ -126,7 +126,11 @@ public sealed class ClientGrain : Grain, IClientGrain
             _state.State.PostLogoutRedirectUris = request.PostLogoutRedirectUris.ToList();
 
         if (request.UserFlow != null)
+        {
             _state.State.UserFlow = request.UserFlow;
+            // Log for debugging
+            Console.WriteLine($"ClientGrain: Updated UserFlow - OrganizationsEnabled={request.UserFlow.OrganizationsEnabled}, Mode={request.UserFlow.OrganizationMode}");
+        }
 
         // Handle application type change
         if (request.IsConfidential.HasValue && request.IsConfidential.Value != _state.State.IsConfidential)

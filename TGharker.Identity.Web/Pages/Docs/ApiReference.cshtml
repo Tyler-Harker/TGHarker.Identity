@@ -35,14 +35,14 @@
 <p>
     Include the tenant in the URL path. This is the recommended approach as it works with standard OIDC clients:
 </p>
-<pre><code>https://identity.example.com/my-company/connect/authorize?...</code></pre>
+<pre><code>https://identity.example.com/tenant/my-company/connect/authorize?...</code></pre>
 <p>
     Configure your OIDC client's authority as:
 </p>
-<pre><code>https://identity.example.com/my-company</code></pre>
+<pre><code>https://identity.example.com/tenant/my-company</code></pre>
 
 <div class="docs-callout docs-callout-info">
-    <p><strong>Best Practice:</strong> Using the URL path prefix allows standard OIDC libraries to work without custom configuration. The discovery document at <code>/{tenantId}/.well-known/openid-configuration</code> will return tenant-specific endpoint URLs.</p>
+    <p><strong>Best Practice:</strong> Using the URL path prefix allows standard OIDC libraries to work without custom configuration. The discovery document at <code>/tenant/tenant/{tenantId}/.well-known/openid-configuration</code> will return tenant-specific endpoint URLs.</p>
 </div>
 
 <h3>Tenant Claims in Tokens</h3>
@@ -69,10 +69,10 @@
 <h2>OAuth 2.0 / OpenID Connect Endpoints</h2>
 <p>All OAuth/OIDC endpoints are tenant-prefixed. Replace <code>{tenantId}</code> with your tenant identifier.</p>
 
-<h3><span class="endpoint-badge endpoint-get">GET</span> /{tenantId}/.well-known/openid-configuration</h3>
+<h3><span class="endpoint-badge endpoint-get">GET</span> /tenant/{tenantId}/.well-known/openid-configuration</h3>
 <p>Returns the OpenID Connect discovery document with all endpoint URLs and supported features for the specified tenant.</p>
 
-<h3><span class="endpoint-badge endpoint-get">GET</span> /{tenantId}/connect/authorize</h3>
+<h3><span class="endpoint-badge endpoint-get">GET</span> /tenant/{tenantId}/connect/authorize</h3>
 <p>Authorization endpoint. Initiates the OAuth 2.0 authorization flow.</p>
 <table>
     <thead>
@@ -92,7 +92,7 @@
     </tbody>
 </table>
 
-<h3><span class="endpoint-badge endpoint-post">POST</span> /{tenantId}/connect/token</h3>
+<h3><span class="endpoint-badge endpoint-post">POST</span> /tenant/{tenantId}/connect/token</h3>
 <p>Token endpoint. Exchange authorization codes or credentials for tokens.</p>
 <table>
     <thead>
@@ -107,11 +107,11 @@
     </tbody>
 </table>
 
-<h3><span class="endpoint-badge endpoint-get">GET</span> /{tenantId}/connect/userinfo</h3>
+<h3><span class="endpoint-badge endpoint-get">GET</span> /tenant/{tenantId}/connect/userinfo</h3>
 <p>Returns claims about the authenticated user. Requires a valid access token.</p>
 <pre><code>Authorization: Bearer {access_token}</code></pre>
 
-<h3><span class="endpoint-badge endpoint-post">POST</span> /{tenantId}/connect/revocation</h3>
+<h3><span class="endpoint-badge endpoint-post">POST</span> /tenant/{tenantId}/connect/revocation</h3>
 <p>Revoke an access token or refresh token.</p>
 <table>
     <thead>
@@ -123,7 +123,7 @@
     </tbody>
 </table>
 
-<h3><span class="endpoint-badge endpoint-post">POST</span> /{tenantId}/connect/introspect</h3>
+<h3><span class="endpoint-badge endpoint-post">POST</span> /tenant/{tenantId}/connect/introspect</h3>
 <p>Introspect a token to check its validity and retrieve metadata.</p>
 
 <h2>Platform Stats API</h2>

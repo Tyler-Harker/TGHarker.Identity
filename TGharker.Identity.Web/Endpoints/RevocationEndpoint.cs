@@ -15,8 +15,8 @@ public static class RevocationEndpoint
             .WithName("Revocation")
             .WithTags("OAuth2");
 
-        // Tenant-prefixed route: /{tenantId}/connect/revocation
-        endpoints.MapPost("/{tenantId}/connect/revocation", HandleRevocationRequest)
+        // Tenant-prefixed route: /tenant/{tenantId}/connect/revocation
+        endpoints.MapPost("/tenant/{tenantId}/connect/revocation", HandleRevocationRequest)
             .AllowAnonymous()
             .DisableAntiforgery()
             .WithName("RevocationWithTenant")

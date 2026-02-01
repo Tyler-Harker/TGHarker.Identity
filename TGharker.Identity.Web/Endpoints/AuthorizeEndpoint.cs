@@ -17,8 +17,8 @@ public static class AuthorizeEndpoint
             .WithName("Authorize")
             .WithTags("OAuth2");
 
-        // Tenant-prefixed route: /{tenantId}/connect/authorize
-        endpoints.MapGet("/{tenantId}/connect/authorize", HandleAuthorizeRequest)
+        // Tenant-prefixed route: /tenant/{tenantId}/connect/authorize
+        endpoints.MapGet("/tenant/{tenantId}/connect/authorize", HandleAuthorizeRequest)
             .AllowAnonymous()
             .WithName("AuthorizeWithTenant")
             .WithTags("OAuth2");

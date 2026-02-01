@@ -17,8 +17,8 @@ public static class IntrospectionEndpoint
             .WithName("Introspection")
             .WithTags("OAuth2");
 
-        // Tenant-prefixed route: /{tenantId}/connect/introspect
-        endpoints.MapPost("/{tenantId}/connect/introspect", HandleIntrospectionRequest)
+        // Tenant-prefixed route: /tenant/{tenantId}/connect/introspect
+        endpoints.MapPost("/tenant/{tenantId}/connect/introspect", HandleIntrospectionRequest)
             .AllowAnonymous()
             .DisableAntiforgery()
             .WithName("IntrospectionWithTenant")

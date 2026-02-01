@@ -106,7 +106,7 @@
 </p>
 
 <h4>Option 1: Token Introspection</h4>
-<pre><code>POST /{tenantId}/connect/introspect
+<pre><code>POST /tenant/{tenantId}/connect/introspect
 Content-Type: application/x-www-form-urlencoded
 Authorization: Basic {client_credentials}
 
@@ -114,7 +114,7 @@ token=ACCESS_TOKEN</code></pre>
 
 <h4>Option 2: Local JWT Validation</h4>
 <ol>
-    <li>Fetch the JWKS from <code>/{tenantId}/.well-known/openid-configuration</code> → <code>jwks_uri</code></li>
+    <li>Fetch the JWKS from <code>/tenant/{tenantId}/.well-known/openid-configuration</code> → <code>jwks_uri</code></li>
     <li>Verify the token signature using the public key</li>
     <li>Check <code>exp</code> claim hasn't passed</li>
     <li>Verify <code>iss</code> matches your identity server</li>
@@ -172,7 +172,7 @@ token=ACCESS_TOKEN</code></pre>
     Tokens can be revoked when a user logs out or when access should be immediately terminated.
 </p>
 
-<pre><code>POST /{tenantId}/connect/revocation
+<pre><code>POST /tenant/{tenantId}/connect/revocation
 Content-Type: application/x-www-form-urlencoded
 
 token=REFRESH_TOKEN

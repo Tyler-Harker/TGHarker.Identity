@@ -71,7 +71,7 @@
 </p>
 
 <h4>1. Redirect to Authorization</h4>
-<pre><code>GET /{tenantId}/connect/authorize?
+<pre><code>GET /tenant/{tenantId}/connect/authorize?
   response_type=code
   &client_id=YOUR_CLIENT_ID
   &redirect_uri=https://yourapp.com/callback
@@ -81,11 +81,11 @@
   &code_challenge_method=S256</code></pre>
 
 <div class="docs-callout docs-callout-info">
-    <p><strong>Tenant in URL:</strong> The tenant identifier is part of the URL path (e.g., <code>/my-company/connect/authorize</code>). This allows standard OIDC clients to work with multi-tenant authentication.</p>
+    <p><strong>Tenant in URL:</strong> The tenant identifier is part of the URL path (e.g., <code>/tenant/my-company/connect/authorize</code>). This allows standard OIDC clients to work with multi-tenant authentication.</p>
 </div>
 
 <h4>2. Exchange Code for Tokens</h4>
-<pre><code>POST /{tenantId}/connect/token
+<pre><code>POST /tenant/{tenantId}/connect/token
 Content-Type: application/x-www-form-urlencoded
 
 grant_type=authorization_code
@@ -112,7 +112,7 @@ grant_type=authorization_code
     Use the access token to retrieve user information:
 </p>
 
-<pre><code>GET /{tenantId}/connect/userinfo
+<pre><code>GET /tenant/{tenantId}/connect/userinfo
 Authorization: Bearer YOUR_ACCESS_TOKEN</code></pre>
 
 <p>Response:</p>

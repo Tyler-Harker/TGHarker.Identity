@@ -49,7 +49,7 @@ public class DetailsModel : PageModel
         // Set authority URL for documentation (tenant-prefixed)
         var request = HttpContext.Request;
         TenantIdentifier = User.FindFirst("tenant_identifier")?.Value ?? string.Empty;
-        Authority = $"{request.Scheme}://{request.Host}/{TenantIdentifier}";
+        Authority = $"{request.Scheme}://{request.Host}/tenant/{TenantIdentifier}";
 
         // Check for new client secret from TempData
         if (TempData["NewClientSecret"] is string secret)

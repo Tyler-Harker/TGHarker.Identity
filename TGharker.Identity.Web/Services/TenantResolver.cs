@@ -89,16 +89,16 @@ public sealed class TenantResolver : ITenantResolver
         if (segments == null || segments.Length == 0)
             return null;
 
-        // Strategy A: /tenants/{tenantId}/... (legacy format)
-        if (segments is { Length: > 1 } && segments[0] == "tenants")
+        // Strategy A: /tenant/{tenantId}/... (new preferred format)
+        if (segments.Length >= 2 && segments[0].Equals("tenant", StringComparison.OrdinalIgnoreCase))
         {
             return segments[1];
         }
 
-        // Strategy B: /{tenantId}/... where first segment is not a known route
-        if (segments.Length >= 1 && !KnownRoutes.Contains(segments[0]))
+        // Strategy B: /tenants/{tenantId}/... (legacy format)
+        if (segments.Length >= 2 && segments[0].Equals("tenants", StringComparison.OrdinalIgnoreCase))
         {
-            return segments[0];
+            return segments[1];
         }
 
         return null;

@@ -21,13 +21,13 @@ public static class DiscoveryEndpoints
             .WithName("JsonWebKeySet")
             .WithTags("Discovery");
 
-        // Tenant-prefixed discovery endpoints: /{tenantId}/.well-known/...
-        endpoints.MapGet("/{tenantId}/.well-known/openid-configuration", HandleDiscoveryRequest)
+        // Tenant-prefixed discovery endpoints: /tenant/{tenantId}/.well-known/...
+        endpoints.MapGet("/tenant/{tenantId}/.well-known/openid-configuration", HandleDiscoveryRequest)
             .AllowAnonymous()
             .WithName("OpenIdConfigurationWithTenant")
             .WithTags("Discovery");
 
-        endpoints.MapGet("/{tenantId}/.well-known/jwks.json", HandleJwksRequest)
+        endpoints.MapGet("/tenant/{tenantId}/.well-known/jwks.json", HandleJwksRequest)
             .AllowAnonymous()
             .WithName("JsonWebKeySetWithTenant")
             .WithTags("Discovery");
@@ -46,10 +46,10 @@ public static class DiscoveryEndpoints
         if (segments == null || segments.Length < 2)
             return string.Empty;
 
-        // If first segment is not a known route, it's a tenant prefix
-        if (!KnownRoutes.Contains(segments[0]))
+        // Check for /tenant/{tenantId}/... pattern
+        if (segments[0].Equals("tenant", StringComparison.OrdinalIgnoreCase) && segments.Length >= 2)
         {
-            return $"/{segments[0]}";
+            return $"/tenant/{segments[1]}";
         }
 
         return string.Empty;

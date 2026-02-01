@@ -18,13 +18,13 @@ public static class UserInfoEndpoint
             .WithName("UserInfoPost")
             .WithTags("OIDC");
 
-        // Tenant-prefixed routes: /{tenantId}/connect/userinfo
-        endpoints.MapGet("/{tenantId}/connect/userinfo", HandleUserInfoRequest)
+        // Tenant-prefixed routes: /tenant/{tenantId}/connect/userinfo
+        endpoints.MapGet("/tenant/{tenantId}/connect/userinfo", HandleUserInfoRequest)
             .RequireAuthorization()
             .WithName("UserInfoGetWithTenant")
             .WithTags("OIDC");
 
-        endpoints.MapPost("/{tenantId}/connect/userinfo", HandleUserInfoRequest)
+        endpoints.MapPost("/tenant/{tenantId}/connect/userinfo", HandleUserInfoRequest)
             .RequireAuthorization()
             .WithName("UserInfoPostWithTenant")
             .WithTags("OIDC");

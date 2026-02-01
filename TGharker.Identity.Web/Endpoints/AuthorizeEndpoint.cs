@@ -122,12 +122,52 @@ public static class AuthorizeEndpoint
         if (membership == null || !membership.IsActive)
             return CreateErrorResponse(redirectUri, state, responseMode, "access_denied", "User is not a member of this tenant");
 
+        // Get user's organizations in this tenant
+        var userGrain = clusterClient.GetGrain<IUserGrain>($"user-{userId}");
+        var user = await userGrain.GetStateAsync();
+        var userOrgs = user?.OrganizationMemberships
+            .Where(m => m.TenantId == tenant.Id)
+            .ToList() ?? [];
+
+        // Determine selected organization
+        string? selectedOrgId = context.Request.Query["organization_id"].FirstOrDefault();
+
+        // If user has organizations but none selected, check for default or redirect to picker
+        if (userOrgs.Count > 0 && string.IsNullOrEmpty(selectedOrgId))
+        {
+            // Try to use default organization
+            selectedOrgId = membership.DefaultOrganizationId;
+
+            // If no default and multiple orgs, redirect to org picker
+            if (string.IsNullOrEmpty(selectedOrgId) && userOrgs.Count > 1 && prompt != "none")
+            {
+                var orgPickerUrl = $"/tenant/{tenant.Identifier}/select-organization?client_id={clientId}&scope={HttpUtility.UrlEncode(scope)}&redirect_uri={HttpUtility.UrlEncode(redirectUri)}&state={state}&nonce={nonce}&code_challenge={codeChallenge}&code_challenge_method={codeChallengeMethod}&response_mode={responseMode}";
+                return Results.Redirect(orgPickerUrl);
+            }
+
+            // If only one org and no default, use that one
+            if (string.IsNullOrEmpty(selectedOrgId) && userOrgs.Count == 1)
+            {
+                selectedOrgId = userOrgs[0].OrganizationId;
+            }
+        }
+
+        // Validate selected organization if provided
+        if (!string.IsNullOrEmpty(selectedOrgId))
+        {
+            var isValidOrg = userOrgs.Any(o => o.OrganizationId == selectedOrgId);
+            if (!isValidOrg)
+            {
+                return CreateErrorResponse(redirectUri, state, responseMode, "access_denied", "User is not a member of the selected organization");
+            }
+        }
+
         // Check if consent is required
         if (client.RequireConsent && prompt != "none")
         {
             // Check for existing grant
             // For now, always redirect to consent if required
-            var consentUrl = $"/tenant/{tenant.Identifier}/consent?client_id={clientId}&scope={HttpUtility.UrlEncode(scope)}&redirect_uri={HttpUtility.UrlEncode(redirectUri)}&state={state}&nonce={nonce}&code_challenge={codeChallenge}&code_challenge_method={codeChallengeMethod}&response_mode={responseMode}";
+            var consentUrl = $"/tenant/{tenant.Identifier}/consent?client_id={clientId}&scope={HttpUtility.UrlEncode(scope)}&redirect_uri={HttpUtility.UrlEncode(redirectUri)}&state={state}&nonce={nonce}&code_challenge={codeChallenge}&code_challenge_method={codeChallengeMethod}&response_mode={responseMode}&organization_id={selectedOrgId}";
             return Results.Redirect(consentUrl);
         }
 
@@ -149,7 +189,8 @@ public static class AuthorizeEndpoint
             Nonce = nonce,
             State = state,
             CreatedAt = DateTime.UtcNow,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(tenant.Configuration.AuthorizationCodeLifetimeMinutes)
+            ExpiresAt = DateTime.UtcNow.AddMinutes(tenant.Configuration.AuthorizationCodeLifetimeMinutes),
+            SelectedOrganizationId = selectedOrgId
         });
 
         // Build redirect URL

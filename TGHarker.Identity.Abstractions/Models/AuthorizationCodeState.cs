@@ -16,4 +16,5 @@ public sealed class AuthorizationCodeState
     [Id(10)] public DateTime ExpiresAt { get; set; }
     [Id(11)] public bool IsRedeemed { get; set; }
     [Id(12)] public DateTime? RedeemedAt { get; set; }
+    [Id(13)] public string? SelectedOrganizationId { get; set; }
 }

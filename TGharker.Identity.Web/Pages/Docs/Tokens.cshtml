@@ -42,8 +42,13 @@
   "email_verified": true,
   "name": "John Doe",
   "tenant_id": "550e8400-e29b-41d4-a716-446655440000",
-  "tenant_identifier": "my-company"
+  "organizations": [{"id": "acme", "name": "Acme Corp"}],
+  "organization": {"id": "acme", "name": "Acme Corp"}
 }</code></pre>
+
+<div class="docs-callout docs-callout-info">
+    <p><strong>Organization Claims:</strong> If the user belongs to organizations, the token includes <code>organizations</code> (all memberships) and <code>organization</code> (currently selected). See <a href="/Docs/Organizations">Organizations</a> for details.</p>
+</div>
 
 <div class="docs-callout docs-callout-info">
     <p><strong>Tenant Claims:</strong> Tokens include <code>tenant_id</code> and <code>tenant_identifier</code> claims because OAuth clients are registered within a specific tenant. Use these claims to scope your application's data access.</p>

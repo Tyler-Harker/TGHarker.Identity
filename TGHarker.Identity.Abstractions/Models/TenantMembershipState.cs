@@ -24,6 +24,7 @@ public sealed class TenantMembershipState
     [Id(5)] public List<UserClaim> Claims { get; set; } = [];
     [Id(6)] public DateTime JoinedAt { get; set; }
     [Id(7)] public DateTime? LastAccessAt { get; set; }
+    [Id(8)] public string? DefaultOrganizationId { get; set; }
 }
 
 [GenerateSerializer]

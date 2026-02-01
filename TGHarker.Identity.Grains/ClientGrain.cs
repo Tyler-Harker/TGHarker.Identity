@@ -87,9 +87,11 @@ public sealed class ClientGrain : Grain, IClientGrain
         };
     }
 
-    public async Task UpdateAsync(UpdateClientRequest request)
+    public async Task<string?> UpdateAsync(UpdateClientRequest request)
     {
         var corsOriginsChanged = request.CorsOrigins != null;
+        string? newSecret = null;
+
         if (request.ClientName != null)
             _state.State.ClientName = request.ClientName;
 
@@ -126,6 +128,32 @@ public sealed class ClientGrain : Grain, IClientGrain
         if (request.UserFlow != null)
             _state.State.UserFlow = request.UserFlow;
 
+        // Handle application type change
+        if (request.IsConfidential.HasValue && request.IsConfidential.Value != _state.State.IsConfidential)
+        {
+            _state.State.IsConfidential = request.IsConfidential.Value;
+
+            // If changing to confidential and no secrets exist, generate one
+            if (request.IsConfidential.Value && _state.State.Secrets.Count == 0)
+            {
+                var plainTextSecret = GenerateClientSecret();
+                var secretHash = HashSecret(plainTextSecret);
+
+                // Clear any existing secrets - only one active secret allowed
+                _state.State.Secrets.Clear();
+
+                _state.State.Secrets.Add(new ClientSecret
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    Description = "Generated on type change",
+                    SecretHash = secretHash,
+                    CreatedAt = DateTime.UtcNow
+                });
+
+                newSecret = plainTextSecret;
+            }
+        }
+
         await _state.WriteStateAsync();
 
         // Invalidate CORS cache if origins changed
@@ -133,6 +161,8 @@ public sealed class ClientGrain : Grain, IClientGrain
         {
             await InvalidateCorsCacheAsync();
         }
+
+        return newSecret;
     }
 
     public Task<bool> ValidateSecretAsync(string secret)
@@ -161,6 +191,9 @@ public sealed class ClientGrain : Grain, IClientGrain
         var plainTextSecret = GenerateClientSecret();
         var secretHash = HashSecret(plainTextSecret);
         var secretId = Guid.NewGuid().ToString();
+
+        // Clear existing secrets - only one active secret allowed at a time
+        _state.State.Secrets.Clear();
 
         _state.State.Secrets.Add(new ClientSecret
         {

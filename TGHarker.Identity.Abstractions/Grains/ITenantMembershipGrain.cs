@@ -28,4 +28,8 @@ public interface ITenantMembershipGrain : IGrainWithStringKey
     Task RemoveRoleAsync(string role);
     Task<IReadOnlyList<string>> GetRolesAsync();
     Task<bool> HasRoleAsync(string role);
+
+    // Default organization
+    Task SetDefaultOrganizationAsync(string? organizationId);
+    Task<string?> GetDefaultOrganizationAsync();
 }

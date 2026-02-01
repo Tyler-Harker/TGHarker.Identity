@@ -1,0 +1,247 @@
+@page
+@model TGharker.Identity.Web.Pages.Docs.OrganizationsModel
+@{
+    ViewData["Title"] = "Organizations";
+    Layout = "_DocsLayout";
+}
+
+<h1>Organizations</h1>
+<p class="lead">
+    Manage user memberships across multiple organizations within a tenant.
+</p>
+
+<h2>Overview</h2>
+<p>
+    Organizations allow you to group users within a tenant. A user can belong to multiple organizations,
+    and each organization can have its own roles and permissions. This is useful for B2B SaaS applications
+    where your customers have teams, departments, or workspaces.
+</p>
+
+<div class="docs-callout docs-callout-info">
+    <p><strong>Tenant vs Organization:</strong> A tenant is the top-level isolation boundary (your customer). Organizations exist within a tenant and represent sub-groups (teams, departments, projects).</p>
+</div>
+
+<h2>Organization Claims</h2>
+<p>
+    When a user authenticates, their ID token includes organization-related claims to help your application
+    understand the user's organizational context.
+</p>
+
+<table>
+    <thead>
+        <tr>
+            <th>Claim</th>
+            <th>Type</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><code>organizations</code></td>
+            <td>JSON Array</td>
+            <td>All organizations the user belongs to within the tenant</td>
+        </tr>
+        <tr>
+            <td><code>organization</code></td>
+            <td>JSON Object</td>
+            <td>The currently selected organization for this session</td>
+        </tr>
+    </tbody>
+</table>
+
+<h3>Example Claims</h3>
+<pre><code>{
+  "sub": "user-123",
+  "email": "user@example.com",
+  "organizations": [
+    {"id": "acme-corp", "name": "Acme Corporation"},
+    {"id": "dev-team", "name": "Development Team"}
+  ],
+  "organization": {"id": "acme-corp", "name": "Acme Corporation"}
+}</code></pre>
+
+<h2>Organization Selection Flow</h2>
+<p>
+    When a user belongs to multiple organizations, Harker Identity handles organization selection during the authentication flow:
+</p>
+
+<ol>
+    <li><strong>Single Organization:</strong> If the user belongs to only one organization, it's automatically selected.</li>
+    <li><strong>Default Organization:</strong> If the user has set a default organization, it's used automatically.</li>
+    <li><strong>Organization Picker:</strong> If the user has multiple organizations and no default, they're shown an organization picker.</li>
+</ol>
+
+<div class="docs-callout docs-callout-info">
+    <p><strong>Remember Choice:</strong> Users can check "Remember this choice for future logins" to set their default organization.</p>
+</div>
+
+<h2>Letting Users Switch Organizations</h2>
+<p>
+    Your application may need to let users switch between organizations mid-session. Here are three approaches:
+</p>
+
+<h3>Option 1: Force Organization Picker</h3>
+<p>
+    Redirect the user to the authorization endpoint without an <code>organization_id</code> parameter.
+    If they belong to multiple organizations, they'll see the organization picker.
+</p>
+
+<pre><code>GET /tenant/{tenantId}/connect/authorize?
+  response_type=code
+  &client_id=your-client-id
+  &redirect_uri=https://yourapp.com/callback
+  &scope=openid profile email
+  &code_challenge=...
+  &code_challenge_method=S256
+  &state=...</code></pre>
+
+<h3>Option 2: Pre-select Organization</h3>
+<p>
+    If you know which organization the user wants to switch to, pass it directly using the
+    <code>organization_id</code> parameter. This bypasses the picker.
+</p>
+
+<pre><code>GET /tenant/{tenantId}/connect/authorize?
+  response_type=code
+  &client_id=your-client-id
+  &redirect_uri=https://yourapp.com/callback
+  &scope=openid profile email
+  &code_challenge=...
+  &code_challenge_method=S256
+  &state=...
+  &<strong>organization_id=dev-team</strong></code></pre>
+
+<div class="docs-callout docs-callout-warning">
+    <p><strong>Validation:</strong> The user must be a member of the specified organization. If not, the request will fail with <code>access_denied</code>.</p>
+</div>
+
+<h3>Option 3: Build a Custom Organization Switcher</h3>
+<p>
+    Use the <code>organizations</code> claim from the current ID token to display a list of available
+    organizations in your application's UI.
+</p>
+
+<h4>Step 1: Parse Organizations from ID Token</h4>
+<pre><code>// JavaScript example
+function parseJwt(token) {
+  const base64Url = token.split('.')[1];
+  const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+  return JSON.parse(atob(base64));
+}
+
+const idToken = parseJwt(id_token);
+const organizations = JSON.parse(idToken.organizations || '[]');
+const currentOrg = JSON.parse(idToken.organization || 'null');
+
+console.log('Available organizations:', organizations);
+console.log('Current organization:', currentOrg);</code></pre>
+
+<h4>Step 2: Display Organization Switcher</h4>
+<pre><code>// React example
+function OrganizationSwitcher({ organizations, currentOrg, tenantId, clientId }) {
+  const switchOrganization = (orgId) => {
+    const params = new URLSearchParams({
+      response_type: 'code',
+      client_id: clientId,
+      redirect_uri: window.location.origin + '/callback',
+      scope: 'openid profile email',
+      organization_id: orgId,
+      // ... other OAuth parameters
+    });
+
+    window.location.href = `/tenant/${tenantId}/connect/authorize?${params}`;
+  };
+
+  return (
+    &lt;select
+      value={currentOrg?.id}
+      onChange={(e) => switchOrganization(e.target.value)}
+    &gt;
+      {organizations.map(org => (
+        &lt;option key={org.id} value={org.id}&gt;
+          {org.name}
+        &lt;/option&gt;
+      ))}
+    &lt;/select&gt;
+  );
+}</code></pre>
+
+<h4>Step 3: Handle the New Token</h4>
+<p>
+    After the user completes the authorization flow, you'll receive new tokens with the updated
+    <code>organization</code> claim reflecting their selection.
+</p>
+
+<h2>Default Organization</h2>
+<p>
+    Users can set a default organization to skip the organization picker on future logins.
+</p>
+
+<h3>Setting via Organization Picker</h3>
+<p>
+    When users select an organization during login, they can check "Remember this choice for future logins"
+    to set it as their default.
+</p>
+
+<h3>Setting via API</h3>
+<p>
+    You can also set a user's default organization programmatically using the tenant membership API:
+</p>
+
+<pre><code>PUT /api/tenants/{tenantId}/members/{userId}/default-organization
+Content-Type: application/json
+Authorization: Bearer {access_token}
+
+{
+  "organizationId": "dev-team"
+}</code></pre>
+
+<h2>Organization Roles</h2>
+<p>
+    Each organization can define its own roles. Users can have different roles in different organizations.
+</p>
+
+<h3>Well-Known Roles</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Role</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><code>org_owner</code></td>
+            <td>Full control over the organization</td>
+        </tr>
+        <tr>
+            <td><code>org_admin</code></td>
+            <td>Administrative access (manage members, settings)</td>
+        </tr>
+        <tr>
+            <td><code>org_member</code></td>
+            <td>Standard member access</td>
+        </tr>
+    </tbody>
+</table>
+
+<h2>Best Practices</h2>
+
+<div class="docs-callout docs-callout-success">
+    <h4>Do:</h4>
+    <ul>
+        <li>Always check the <code>organization</code> claim to scope data access</li>
+        <li>Provide a clear UI for users to switch organizations</li>
+        <li>Handle the case where a user has no organizations gracefully</li>
+        <li>Cache the organizations list but refresh on each login</li>
+    </ul>
+</div>
+
+<div class="docs-callout docs-callout-danger">
+    <h4>Don't:</h4>
+    <ul>
+        <li>Assume users will always have an organization selected</li>
+        <li>Allow users to access data from organizations they're not members of</li>
+        <li>Cache organization membership indefinitely (it can change)</li>
+    </ul>
+</div>

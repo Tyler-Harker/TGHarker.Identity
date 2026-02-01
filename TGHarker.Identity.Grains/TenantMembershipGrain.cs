@@ -129,4 +129,15 @@ public sealed class TenantMembershipGrain : Grain, ITenantMembershipGrain
     {
         return Task.FromResult(_state.State.Roles.Contains(role));
     }
+
+    public async Task SetDefaultOrganizationAsync(string? organizationId)
+    {
+        _state.State.DefaultOrganizationId = organizationId;
+        await _state.WriteStateAsync();
+    }
+
+    public Task<string?> GetDefaultOrganizationAsync()
+    {
+        return Task.FromResult(_state.State.DefaultOrganizationId);
+    }
 }

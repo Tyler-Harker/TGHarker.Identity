@@ -37,26 +37,50 @@
                         <div class="form-text">Client ID cannot be changed after creation.</div>
                     </div>
 
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label asp-for="Input.ClientName" class="form-label">Application Name <span class="text-danger">*</span></label>
-                            <input asp-for="Input.ClientName" class="form-control" />
-                            <span asp-validation-for="Input.ClientName" class="text-danger"></span>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label text-muted small">Client Type</label>
-                            <div class="form-control-plaintext">
-                                @if (Model.IsConfidential)
-                                {
-                                    <span class="badge bg-primary">Confidential</span>
-                                }
-                                else
-                                {
-                                    <span class="badge bg-secondary">Public</span>
-                                }
-                                <span class="text-muted small ms-2">Cannot be changed</span>
+                    <div class="mb-3">
+                        <label asp-for="Input.ClientName" class="form-label">Application Name <span class="text-danger">*</span></label>
+                        <input asp-for="Input.ClientName" class="form-control" />
+                        <span asp-validation-for="Input.ClientName" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Application Type</label>
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <div class="form-check card h-100">
+                                    <div class="card-body">
+                                        <input class="form-check-input" type="radio" asp-for="Input.ApplicationType" value="spa" id="typeSpa" />
+                                        <label class="form-check-label d-block" for="typeSpa">
+                                            <i class="bi bi-window me-1"></i> <strong>Single Page App</strong>
+                                            <div class="small text-muted">React, Angular, Vue</div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check card h-100">
+                                    <div class="card-body">
+                                        <input class="form-check-input" type="radio" asp-for="Input.ApplicationType" value="server" id="typeServer" />
+                                        <label class="form-check-label d-block" for="typeServer">
+                                            <i class="bi bi-hdd-rack me-1"></i> <strong>Server / Backend</strong>
+                                            <div class="small text-muted">API, CLI, Service</div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check card h-100">
+                                    <div class="card-body">
+                                        <input class="form-check-input" type="radio" asp-for="Input.ApplicationType" value="native" id="typeNative" />
+                                        <label class="form-check-label d-block" for="typeNative">
+                                            <i class="bi bi-phone me-1"></i> <strong>Native / Mobile</strong>
+                                            <div class="small text-muted">iOS, Android, Desktop</div>
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
                         </div>
+                        <div class="form-text">Changing the application type will update the allowed grant types. Changing to Server will generate a client secret if none exists.</div>
                     </div>
 
                     <div class="mb-3">

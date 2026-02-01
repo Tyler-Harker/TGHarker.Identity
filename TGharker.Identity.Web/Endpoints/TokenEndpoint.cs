@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.IdentityModel.Tokens;
 using TGHarker.Identity.Abstractions.Grains;
@@ -180,7 +181,7 @@ public static class TokenEndpoint
         logger.LogInformation("Generating tokens with issuer: {Issuer}", baseUrl);
 
         // Build identity claims based on scopes
-        var identityClaims = await BuildIdentityClaimsAsync(user, membership, authCode.Scopes, clusterClient, tenant.Id);
+        var identityClaims = await BuildIdentityClaimsAsync(user, membership, authCode.Scopes, clusterClient, tenant.Id, authCode.SelectedOrganizationId);
         var additionalClaims = await BuildResourceClaimsAsync(user, membership, authCode.Scopes);
 
         var tokenContext = new TokenGenerationContext
@@ -323,7 +324,9 @@ public static class TokenEndpoint
 
             if (user != null)
             {
-                identityClaims = await BuildIdentityClaimsAsync(user, membership, scopes, clusterClient, tenant.Id);
+                // For refresh tokens, use the default organization since we don't store selected org in refresh token
+                var selectedOrgId = membership?.DefaultOrganizationId;
+                identityClaims = await BuildIdentityClaimsAsync(user, membership, scopes, clusterClient, tenant.Id, selectedOrgId);
                 additionalClaims = await BuildResourceClaimsAsync(user, membership, scopes);
             }
         }
@@ -389,12 +392,13 @@ public static class TokenEndpoint
         return refreshTokenValue;
     }
 
-    private static Task<Dictionary<string, string>> BuildIdentityClaimsAsync(
+    private static async Task<Dictionary<string, string>> BuildIdentityClaimsAsync(
         UserState user,
         TenantMembershipState? membership,
         IReadOnlyList<string> scopes,
         IClusterClient clusterClient,
-        string tenantId)
+        string tenantId,
+        string? selectedOrganizationId)
     {
         var claims = new Dictionary<string, string>();
 
@@ -432,7 +436,54 @@ public static class TokenEndpoint
             }
         }
 
-        return Task.FromResult(claims);
+        // Add organizations claim - user's organization memberships within this tenant
+        var tenantOrgMemberships = user.OrganizationMemberships
+            .Where(m => m.TenantId == tenantId)
+            .ToList();
+
+        if (tenantOrgMemberships.Count > 0)
+        {
+            var organizations = new List<OrganizationClaimValue>();
+
+            foreach (var orgRef in tenantOrgMemberships)
+            {
+                var orgGrain = clusterClient.GetGrain<IOrganizationGrain>($"{tenantId}/org-{orgRef.OrganizationId}");
+                var orgState = await orgGrain.GetStateAsync();
+
+                if (orgState != null && orgState.IsActive)
+                {
+                    organizations.Add(new OrganizationClaimValue
+                    {
+                        Id = orgState.Identifier,
+                        Name = orgState.Name
+                    });
+                }
+            }
+
+            if (organizations.Count > 0)
+            {
+                claims["organizations"] = JsonSerializer.Serialize(organizations, OrganizationClaimJsonContext.Default.ListOrganizationClaimValue);
+            }
+        }
+
+        // Add selected/current organization claim
+        if (!string.IsNullOrEmpty(selectedOrganizationId))
+        {
+            var selectedOrgGrain = clusterClient.GetGrain<IOrganizationGrain>($"{tenantId}/org-{selectedOrganizationId}");
+            var selectedOrgState = await selectedOrgGrain.GetStateAsync();
+
+            if (selectedOrgState != null && selectedOrgState.IsActive)
+            {
+                var orgClaim = new OrganizationClaimValue
+                {
+                    Id = selectedOrgState.Identifier,
+                    Name = selectedOrgState.Name
+                };
+                claims["organization"] = JsonSerializer.Serialize(orgClaim, OrganizationClaimJsonContext.Default.OrganizationClaimValue);
+            }
+        }
+
+        return claims;
     }
 
     private static Task<Dictionary<string, string>> BuildResourceClaimsAsync(
@@ -519,4 +570,19 @@ public sealed class TokenErrorResponse
     [JsonPropertyName("error_description")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? ErrorDescription { get; set; }
+}
+
+public sealed class OrganizationClaimValue
+{
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = string.Empty;
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+}
+
+[JsonSerializable(typeof(List<OrganizationClaimValue>))]
+[JsonSerializable(typeof(OrganizationClaimValue))]
+internal partial class OrganizationClaimJsonContext : JsonSerializerContext
+{
 }

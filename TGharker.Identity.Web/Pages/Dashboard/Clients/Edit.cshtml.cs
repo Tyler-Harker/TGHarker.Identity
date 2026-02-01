@@ -36,6 +36,8 @@ public class EditModel : PageModel
         [StringLength(500)]
         public string? Description { get; set; }
 
+        public string ApplicationType { get; set; } = "spa";
+
         public List<string> RedirectUris { get; set; } = [];
 
         public List<string> AllowedScopes { get; set; } = [];
@@ -91,10 +93,14 @@ public class EditModel : PageModel
 
         var userFlow = client.UserFlow ?? new UserFlowSettings();
 
+        // Determine current application type from settings
+        var applicationType = DetermineApplicationType(client);
+
         Input = new InputModel
         {
             ClientName = client.ClientName ?? string.Empty,
             Description = client.Description,
+            ApplicationType = applicationType,
             RedirectUris = client.RedirectUris.ToList(),
             AllowedScopes = client.AllowedScopes.ToList(),
             RequirePkce = client.RequirePkce,
@@ -112,6 +118,18 @@ public class EditModel : PageModel
         };
 
         return Page();
+    }
+
+    private static string DetermineApplicationType(ClientState client)
+    {
+        if (client.IsConfidential)
+            return "server";
+
+        // Public client - check grant types to distinguish SPA from native
+        if (client.AllowedGrantTypes.Contains(GrantTypes.RefreshToken))
+            return "native";
+
+        return "spa";
     }
 
     public async Task<IActionResult> OnPostAsync(string id)
@@ -166,6 +184,16 @@ public class EditModel : PageModel
                 OrganizationHelpText = Input.OrganizationHelpText?.Trim()
             };
 
+            // Determine client configuration based on application type
+            var newIsConfidential = Input.ApplicationType == "server";
+            var grantTypes = Input.ApplicationType switch
+            {
+                "spa" => new List<string> { GrantTypes.AuthorizationCode },
+                "server" => new List<string> { GrantTypes.ClientCredentials, GrantTypes.AuthorizationCode, GrantTypes.RefreshToken },
+                "native" => new List<string> { GrantTypes.AuthorizationCode, GrantTypes.RefreshToken },
+                _ => new List<string> { GrantTypes.AuthorizationCode }
+            };
+
             // Update client
             var updateRequest = new UpdateClientRequest
             {
@@ -177,14 +205,25 @@ public class EditModel : PageModel
                 RequireConsent = Input.RequireConsent,
                 CorsOrigins = corsOrigins,
                 PostLogoutRedirectUris = postLogoutRedirectUris,
-                UserFlow = userFlow
+                UserFlow = userFlow,
+                IsConfidential = newIsConfidential,
+                AllowedGrantTypes = grantTypes
             };
 
-            await clientGrain.UpdateAsync(updateRequest);
+            var newSecret = await clientGrain.UpdateAsync(updateRequest);
 
             _logger.LogInformation("Client {ClientId} updated in tenant {TenantId}", id, tenantId);
 
-            TempData["SuccessMessage"] = $"Application '{Input.ClientName}' updated successfully.";
+            if (!string.IsNullOrEmpty(newSecret))
+            {
+                // A new secret was generated when changing to confidential client
+                TempData["NewClientSecret"] = newSecret;
+                TempData["SuccessMessage"] = $"Application '{Input.ClientName}' updated successfully. Application type changed to Server - copy the client secret now, it won't be shown again.";
+            }
+            else
+            {
+                TempData["SuccessMessage"] = $"Application '{Input.ClientName}' updated successfully.";
+            }
             return RedirectToPage("./Details", new { id });
         }
         catch (Exception ex)

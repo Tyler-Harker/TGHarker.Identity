@@ -11,7 +11,7 @@ public interface IClientGrain : IGrainWithStringKey
 {
     Task<ClientState?> GetStateAsync();
     Task<CreateClientResult> CreateAsync(CreateClientRequest request);
-    Task UpdateAsync(UpdateClientRequest request);
+    Task<string?> UpdateAsync(UpdateClientRequest request);
     Task<bool> ValidateSecretAsync(string secret);
     Task<AddSecretResult> AddSecretAsync(string description, DateTime? expiresAt);
     Task<bool> RevokeSecretAsync(string secretId);

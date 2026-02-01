@@ -35,6 +35,7 @@ public sealed class UpdateClientRequest
     [Id(9)] public int? RefreshTokenLifetimeDays { get; set; }
     [Id(10)] public List<string>? PostLogoutRedirectUris { get; set; }
     [Id(11)] public UserFlowSettings? UserFlow { get; set; }
+    [Id(12)] public bool? IsConfidential { get; set; }
 }
 
 [GenerateSerializer]

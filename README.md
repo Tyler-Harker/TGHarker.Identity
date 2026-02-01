@@ -110,6 +110,83 @@ azd up
 4. Exchange code + PKCE verifier for tokens at `/connect/token`
 5. Receive `access_token`, `id_token`, and optionally `refresh_token`
 
+## Organizations
+
+Users can belong to multiple organizations within a tenant. The ID token includes organization-related claims to help your application understand the user's organizational context.
+
+### Organization Claims in ID Token
+
+| Claim | Description | Example |
+|-------|-------------|---------|
+| `organizations` | JSON array of all organizations the user belongs to | `[{"id":"acme","name":"Acme Corp"},{"id":"dev-team","name":"Dev Team"}]` |
+| `organization` | JSON object of the currently selected organization | `{"id":"acme","name":"Acme Corp"}` |
+
+### Organization Selection Flow
+
+When a user belongs to multiple organizations, they can select which organization to use for the session:
+
+1. **Automatic Selection** - If the user has only one organization, it's automatically selected
+2. **Default Organization** - If the user has set a default organization, it's used automatically
+3. **Organization Picker** - If the user has multiple organizations and no default, they're redirected to `/tenant/{tenantId}/select-organization` to choose one
+
+### Letting Users Switch Organizations
+
+To allow a user to switch to a different organization mid-session, redirect them to the authorization endpoint with `prompt=login` or implement one of these approaches:
+
+#### Option 1: Re-authorize with Organization Picker
+
+Force the organization picker to appear by not passing an `organization_id`:
+
+```
+/tenant/{tenantId}/connect/authorize?
+  response_type=code
+  &client_id={clientId}
+  &redirect_uri={redirectUri}
+  &scope=openid profile email
+  &prompt=select_account
+  ...
+```
+
+The user will be shown the organization picker if they belong to multiple organizations.
+
+#### Option 2: Pre-select Organization
+
+If you know which organization the user wants to switch to, pass it directly:
+
+```
+/tenant/{tenantId}/connect/authorize?
+  response_type=code
+  &client_id={clientId}
+  &redirect_uri={redirectUri}
+  &scope=openid profile email
+  &organization_id={organizationId}
+  ...
+```
+
+This bypasses the picker and directly selects the specified organization (user must be a member).
+
+#### Option 3: Build a Custom Organization Switcher
+
+Use the `organizations` claim from the current ID token to display a list of available organizations in your application. When the user selects one, re-authorize with the `organization_id` parameter set to the chosen organization.
+
+```javascript
+// Example: Parse organizations from ID token
+const idToken = parseJwt(id_token);
+const organizations = JSON.parse(idToken.organizations || '[]');
+
+// Display org switcher UI
+organizations.forEach(org => {
+  console.log(`${org.name} (${org.id})`);
+});
+
+// When user selects an org, redirect to authorize with organization_id
+window.location.href = `/tenant/${tenantId}/connect/authorize?...&organization_id=${selectedOrgId}`;
+```
+
+### Setting a Default Organization
+
+Users can set a default organization when selecting one during login by checking "Remember this choice for future logins". This default is stored per-tenant and will be used automatically for future authorization requests.
+
 ## Configuration
 
 ### Default Token Lifetimes

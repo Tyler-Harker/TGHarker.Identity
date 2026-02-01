@@ -1,0 +1,60 @@
+@page "/tenant/{tenantId}/select-organization"
+@model TGharker.Identity.Web.Pages.Tenant.SelectOrganizationModel
+@{
+    ViewData["Title"] = "Select Organization";
+}
+
+<h4 class="mb-4 text-center">Select Organization</h4>
+<p class="text-muted text-center mb-4">Choose which organization you want to use for this session.</p>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-danger" role="alert">
+        <i class="bi bi-exclamation-triangle me-2"></i>@Model.ErrorMessage
+    </div>
+}
+
+<form method="post">
+    <input type="hidden" asp-for="TenantId" />
+    <input type="hidden" asp-for="ClientId" />
+    <input type="hidden" asp-for="Scope" />
+    <input type="hidden" asp-for="RedirectUri" />
+    <input type="hidden" asp-for="State" />
+    <input type="hidden" asp-for="Nonce" />
+    <input type="hidden" asp-for="CodeChallenge" />
+    <input type="hidden" asp-for="CodeChallengeMethod" />
+    <input type="hidden" asp-for="ResponseMode" />
+
+    <div class="list-group mb-4">
+        @foreach (var org in Model.Organizations)
+        {
+            <label class="list-group-item list-group-item-action d-flex align-items-start">
+                <input class="form-check-input me-3 mt-1" type="radio"
+                       name="SelectedOrganizationId" value="@org.Id"
+                       @(Model.SelectedOrganizationId == org.Id ? "checked" : "") />
+                <div class="flex-grow-1">
+                    <div class="fw-semibold">@(org.DisplayName ?? org.Name)</div>
+                    @if (!string.IsNullOrEmpty(org.Description))
+                    {
+                        <small class="text-muted">@org.Description</small>
+                    }
+                </div>
+            </label>
+        }
+    </div>
+
+    <div class="form-check mb-4">
+        <input asp-for="SetAsDefault" class="form-check-input" type="checkbox" />
+        <label asp-for="SetAsDefault" class="form-check-label">
+            Remember this choice for future logins
+        </label>
+    </div>
+
+    <div class="d-grid">
+        <button type="submit" class="btn btn-tenant-primary btn-lg">Continue</button>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
 using TGHarker.Identity.Abstractions.Grains;
-using TGHarker.Orleans.Search.Core.Extensions;
+using TGharker.Identity.Web.Services;
 
 namespace TGharker.Identity.Web.Pages.Tenant;
 
@@ -9,8 +9,9 @@ public class ForgotPasswordModel : TenantAuthPageModel
 {
     public ForgotPasswordModel(
         IClusterClient clusterClient,
+        IGrainSearchService searchService,
         ILogger<ForgotPasswordModel> logger)
-        : base(clusterClient, logger)
+        : base(clusterClient, searchService, logger)
     {
     }
 

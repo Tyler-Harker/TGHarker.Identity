@@ -17,10 +17,11 @@ public class LoginModel : TenantAuthPageModel
 
     public LoginModel(
         IClusterClient clusterClient,
+        IGrainSearchService searchService,
         ISessionService sessionService,
         IUserFlowService userFlowService,
         ILogger<LoginModel> logger)
-        : base(clusterClient, logger)
+        : base(clusterClient, searchService, logger)
     {
         _sessionService = sessionService;
         _userFlowService = userFlowService;

@@ -16,10 +16,11 @@ public class SetupOrganizationModel : TenantAuthPageModel
 
     public SetupOrganizationModel(
         IClusterClient clusterClient,
+        IGrainSearchService searchService,
         IUserFlowService userFlowService,
         IOrganizationCreationService organizationCreationService,
         ILogger<SetupOrganizationModel> logger)
-        : base(clusterClient, logger)
+        : base(clusterClient, searchService, logger)
     {
         _userFlowService = userFlowService;
         _organizationCreationService = organizationCreationService;
@@ -33,28 +34,37 @@ public class SetupOrganizationModel : TenantAuthPageModel
     public UserFlowSettings? UserFlow { get; set; }
 
     // OAuth parameters passed through individually to avoid URL encoding issues
+    // Note: Use FromQuery with explicit names to match OAuth2 snake_case convention
     [BindProperty(SupportsGet = true)]
+    [FromQuery(Name = "client_id")]
     public string? ClientId { get; set; }
 
     [BindProperty(SupportsGet = true)]
+    [FromQuery(Name = "scope")]
     public string? Scope { get; set; }
 
     [BindProperty(SupportsGet = true)]
+    [FromQuery(Name = "redirect_uri")]
     public string? RedirectUri { get; set; }
 
     [BindProperty(SupportsGet = true)]
+    [FromQuery(Name = "state")]
     public string? State { get; set; }
 
     [BindProperty(SupportsGet = true)]
+    [FromQuery(Name = "nonce")]
     public string? Nonce { get; set; }
 
     [BindProperty(SupportsGet = true)]
+    [FromQuery(Name = "code_challenge")]
     public string? CodeChallenge { get; set; }
 
     [BindProperty(SupportsGet = true)]
+    [FromQuery(Name = "code_challenge_method")]
     public string? CodeChallengeMethod { get; set; }
 
     [BindProperty(SupportsGet = true)]
+    [FromQuery(Name = "response_mode")]
     public string? ResponseMode { get; set; }
 
     public class InputModel

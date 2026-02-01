@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using TGHarker.Identity.Abstractions.Grains;
 using TGHarker.Identity.Abstractions.Models;
+using TGharker.Identity.Web.Services;
 
 namespace TGharker.Identity.Web.Pages.Tenant;
 
@@ -12,8 +13,9 @@ public class SelectOrganizationModel : TenantAuthPageModel
 {
     public SelectOrganizationModel(
         IClusterClient clusterClient,
+        IGrainSearchService searchService,
         ILogger<SelectOrganizationModel> logger)
-        : base(clusterClient, logger)
+        : base(clusterClient, searchService, logger)
     {
     }
 

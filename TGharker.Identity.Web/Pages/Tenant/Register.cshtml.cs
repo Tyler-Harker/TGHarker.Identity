@@ -10,7 +10,6 @@ namespace TGharker.Identity.Web.Pages.Tenant;
 
 public class RegisterModel : TenantAuthPageModel
 {
-    private readonly IGrainSearchService _searchService;
     private readonly IUserFlowService _userFlowService;
     private readonly IOrganizationCreationService _organizationCreationService;
 
@@ -20,9 +19,8 @@ public class RegisterModel : TenantAuthPageModel
         IUserFlowService userFlowService,
         IOrganizationCreationService organizationCreationService,
         ILogger<RegisterModel> logger)
-        : base(clusterClient, logger)
+        : base(clusterClient, searchService, logger)
     {
-        _searchService = searchService;
         _userFlowService = userFlowService;
         _organizationCreationService = organizationCreationService;
     }
@@ -104,7 +102,7 @@ public class RegisterModel : TenantAuthPageModel
         if (string.IsNullOrEmpty(InviteToken))
             return;
 
-        var invitationGrain = await _searchService.GetInvitationByTokenAsync(InviteToken);
+        var invitationGrain = await SearchService.GetInvitationByTokenAsync(InviteToken);
         if (invitationGrain == null)
             return;
 
@@ -159,7 +157,7 @@ public class RegisterModel : TenantAuthPageModel
         }
 
         // Check if email already exists
-        if (await _searchService.EmailExistsAsync(Input.Email))
+        if (await SearchService.EmailExistsAsync(Input.Email))
         {
             ErrorMessage = "An account with this email already exists.";
             return Page();
@@ -190,7 +188,7 @@ public class RegisterModel : TenantAuthPageModel
         // Handle tenant invitation if present
         if (!string.IsNullOrEmpty(InviteToken) && Invitation != null)
         {
-            var invitationGrain = await _searchService.GetInvitationByTokenAsync(InviteToken);
+            var invitationGrain = await SearchService.GetInvitationByTokenAsync(InviteToken);
             if (invitationGrain != null && await invitationGrain.IsValidAsync())
             {
                 var acceptResult = await invitationGrain.AcceptAsync(userId);

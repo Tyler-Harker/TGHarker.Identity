@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Mvc;
 using TGHarker.Identity.Abstractions.Grains;
+using TGharker.Identity.Web.Services;
 
 namespace TGharker.Identity.Web.Pages.Tenant;
 
@@ -9,8 +10,9 @@ public class ResetPasswordModel : TenantAuthPageModel
 {
     public ResetPasswordModel(
         IClusterClient clusterClient,
+        IGrainSearchService searchService,
         ILogger<ResetPasswordModel> logger)
-        : base(clusterClient, logger)
+        : base(clusterClient, searchService, logger)
     {
     }
 

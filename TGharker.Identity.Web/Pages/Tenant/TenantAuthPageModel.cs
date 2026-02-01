@@ -2,8 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using TGHarker.Identity.Abstractions.Grains;
 using TGHarker.Identity.Abstractions.Models;
-using TGHarker.Orleans.Search.Core.Extensions;
-using TGHarker.Orleans.Search.Generated;
+using TGharker.Identity.Web.Services;
 
 namespace TGharker.Identity.Web.Pages.Tenant;
 
@@ -14,11 +13,13 @@ namespace TGharker.Identity.Web.Pages.Tenant;
 public abstract class TenantAuthPageModel : PageModel
 {
     protected readonly IClusterClient ClusterClient;
+    protected readonly IGrainSearchService SearchService;
     protected readonly ILogger Logger;
 
-    protected TenantAuthPageModel(IClusterClient clusterClient, ILogger logger)
+    protected TenantAuthPageModel(IClusterClient clusterClient, IGrainSearchService searchService, ILogger logger)
     {
         ClusterClient = clusterClient;
+        SearchService = searchService;
         Logger = logger;
     }
 
@@ -58,10 +59,8 @@ public abstract class TenantAuthPageModel : PageModel
 
         var normalizedId = TenantId.ToLowerInvariant();
 
-        // Search for tenant by identifier
-        var tenantGrain = await ClusterClient.Search<ITenantGrain>()
-            .Where(t => t.Identifier == normalizedId && t.IsActive)
-            .FirstOrDefaultAsync();
+        // Search for tenant by identifier using search service
+        var tenantGrain = await SearchService.GetTenantByIdentifierAsync(normalizedId);
 
         if (tenantGrain == null)
         {

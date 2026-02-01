@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
+using TGharker.Identity.Web.Services;
 
 namespace TGharker.Identity.Web.Pages.Tenant;
 
@@ -8,8 +9,9 @@ public class LogoutModel : TenantAuthPageModel
 {
     public LogoutModel(
         IClusterClient clusterClient,
+        IGrainSearchService searchService,
         ILogger<LogoutModel> logger)
-        : base(clusterClient, logger)
+        : base(clusterClient, searchService, logger)
     {
     }
 

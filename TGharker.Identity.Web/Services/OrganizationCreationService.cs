@@ -153,6 +153,10 @@ public sealed partial class OrganizationCreationService : IOrganizationCreationS
         // Add user to organization's member list
         await orgGrain.AddMemberAsync(userId);
 
+        // Add organization to user's membership list
+        var userGrain = _clusterClient.GetGrain<IUserGrain>($"user-{userId}");
+        await userGrain.AddOrganizationMembershipAsync(tenantId, orgId);
+
         return new OrganizationCreationResult
         {
             Success = true,

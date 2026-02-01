@@ -40,6 +40,11 @@
                         @foreach (var scope in Model.RequestedScopes)
                         {
                             <label class="list-group-item">
+                                @* Disabled checkboxes don't submit values, so add hidden input for required scopes *@
+                                @if (scope.IsRequired)
+                                {
+                                    <input type="hidden" name="GrantedScopes" value="@scope.Name" />
+                                }
                                 <input type="checkbox" name="GrantedScopes" value="@scope.Name" checked="@scope.IsRequired" disabled="@scope.IsRequired" class="form-check-input me-2" />
                                 <strong>@scope.DisplayName</strong>
                                 @if (!string.IsNullOrEmpty(scope.Description))

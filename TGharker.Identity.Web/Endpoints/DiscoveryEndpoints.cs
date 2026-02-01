@@ -10,6 +10,7 @@ public static class DiscoveryEndpoints
 {
     public static IEndpointRouteBuilder MapDiscoveryEndpoints(this IEndpointRouteBuilder endpoints)
     {
+        // Standard discovery endpoints
         endpoints.MapGet("/.well-known/openid-configuration", HandleDiscoveryRequest)
             .AllowAnonymous()
             .WithName("OpenIdConfiguration")
@@ -20,7 +21,38 @@ public static class DiscoveryEndpoints
             .WithName("JsonWebKeySet")
             .WithTags("Discovery");
 
+        // Tenant-prefixed discovery endpoints: /{tenantId}/.well-known/...
+        endpoints.MapGet("/{tenantId}/.well-known/openid-configuration", HandleDiscoveryRequest)
+            .AllowAnonymous()
+            .WithName("OpenIdConfigurationWithTenant")
+            .WithTags("Discovery");
+
+        endpoints.MapGet("/{tenantId}/.well-known/jwks.json", HandleJwksRequest)
+            .AllowAnonymous()
+            .WithName("JsonWebKeySetWithTenant")
+            .WithTags("Discovery");
+
         return endpoints;
+    }
+
+    private static readonly HashSet<string> KnownRoutes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".well-known", "connect", "account", "admin", "docs", "stats", "tenants", "tenant", "api"
+    };
+
+    private static string GetTenantPathPrefix(HttpContext context)
+    {
+        var segments = context.Request.Path.Value?.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (segments == null || segments.Length < 2)
+            return string.Empty;
+
+        // If first segment is not a known route, it's a tenant prefix
+        if (!KnownRoutes.Contains(segments[0]))
+        {
+            return $"/{segments[0]}";
+        }
+
+        return string.Empty;
     }
 
     private static async Task<IResult> HandleDiscoveryRequest(
@@ -32,7 +64,9 @@ public static class DiscoveryEndpoints
         if (tenant == null)
             return Results.NotFound(new { error = "tenant_not_found" });
 
-        var baseUrl = $"{context.Request.Scheme}://{context.Request.Host}";
+        // Check if tenant was resolved via path prefix (e.g., /{tenantId}/.well-known/...)
+        var tenantPrefix = GetTenantPathPrefix(context);
+        var baseUrl = $"{context.Request.Scheme}://{context.Request.Host}{tenantPrefix}";
 
         // Get supported scopes from tenant
         var scopeNames = new List<string> { "openid", "profile", "email", "phone", "offline_access" };

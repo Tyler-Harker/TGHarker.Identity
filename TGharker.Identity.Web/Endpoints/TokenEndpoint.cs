@@ -17,6 +17,13 @@ public static class TokenEndpoint
             .WithName("Token")
             .WithTags("OAuth2");
 
+        // Tenant-prefixed route: /{tenantId}/connect/token
+        endpoints.MapPost("/{tenantId}/connect/token", HandleTokenRequest)
+            .AllowAnonymous()
+            .DisableAntiforgery()
+            .WithName("TokenWithTenant")
+            .WithTags("OAuth2");
+
         return endpoints;
     }
 

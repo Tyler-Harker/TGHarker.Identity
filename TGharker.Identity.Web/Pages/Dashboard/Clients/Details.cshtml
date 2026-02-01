@@ -264,14 +264,16 @@
                             <div class="accordion-body px-0 pb-0">
                                 <p class="small text-muted">Use these endpoints to integrate with your application:</p>
                                 <dl class="small mb-0">
+                                    <dt>Authority</dt>
+                                    <dd><code class="user-select-all">@Model.Authority</code></dd>
                                     <dt>Discovery</dt>
-                                    <dd><code class="user-select-all">/.well-known/openid-configuration</code></dd>
+                                    <dd><code class="user-select-all">/@Model.TenantIdentifier/.well-known/openid-configuration</code></dd>
                                     <dt>Authorization</dt>
-                                    <dd><code class="user-select-all">/connect/authorize</code></dd>
+                                    <dd><code class="user-select-all">/@Model.TenantIdentifier/connect/authorize</code></dd>
                                     <dt>Token</dt>
-                                    <dd><code class="user-select-all">/connect/token</code></dd>
+                                    <dd><code class="user-select-all">/@Model.TenantIdentifier/connect/token</code></dd>
                                     <dt>User Info</dt>
-                                    <dd><code class="user-select-all">/connect/userinfo</code></dd>
+                                    <dd><code class="user-select-all">/@Model.TenantIdentifier/connect/userinfo</code></dd>
                                 </dl>
                             </div>
                         </div>
@@ -307,14 +309,13 @@
                                         <pre class="code-block mb-0"><code><span class="keyword">import</span> { <span class="type">UserManager</span> } <span class="keyword">from</span> <span class="string">'oidc-client-ts'</span>;
 
 <span class="keyword">const</span> <span class="property">userManager</span> = <span class="keyword">new</span> <span class="type">UserManager</span>({
+  <span class="comment">// Authority includes tenant: /{tenantId}</span>
   <span class="property">authority</span>: <span class="string">'@Model.Authority'</span>,
   <span class="property">client_id</span>: <span class="string">'@Model.Client.ClientId'</span>,
   <span class="property">redirect_uri</span>: <span class="string">'@(Model.Client.RedirectUris.FirstOrDefault() ?? "http://localhost:3000/callback")'</span>,
   <span class="property">post_logout_redirect_uri</span>: <span class="string">'@(Model.Client.PostLogoutRedirectUris.FirstOrDefault() ?? "http://localhost:3000")'</span>,
   <span class="property">response_type</span>: <span class="string">'code'</span>,
-  <span class="property">scope</span>: <span class="string">'@string.Join(" ", Model.Client.AllowedScopes)'</span>,
-  <span class="comment">// Multi-tenant: pass tenant identifier</span>
-  <span class="property">extraQueryParams</span>: { <span class="property">tenant</span>: <span class="string">'@Model.TenantIdentifier'</span> },@(Model.Client.IsConfidential ? "" : @"
+  <span class="property">scope</span>: <span class="string">'@string.Join(" ", Model.Client.AllowedScopes)'</span>,@(Model.Client.IsConfidential ? "" : @"
   <span class=""property"">automaticSilentRenew</span>: <span class=""keyword"">true</span>,")
 });
 
@@ -342,6 +343,7 @@
   <span class="property">providers</span>: [
     <span class="function">provideAuth</span>({
       <span class="property">config</span>: {
+        <span class="comment">// Authority includes tenant: /{tenantId}</span>
         <span class="property">authority</span>: <span class="string">'@Model.Authority'</span>,
         <span class="property">redirectUrl</span>: <span class="string">'@(Model.Client.RedirectUris.FirstOrDefault() ?? "http://localhost:4200/callback")'</span>,
         <span class="property">postLogoutRedirectUri</span>: <span class="string">'@(Model.Client.PostLogoutRedirectUris.FirstOrDefault() ?? "http://localhost:4200")'</span>,
@@ -350,8 +352,6 @@
         <span class="property">responseType</span>: <span class="string">'code'</span>,
         <span class="property">silentRenew</span>: <span class="keyword">true</span>,
         <span class="property">useRefreshToken</span>: <span class="keyword">true</span>,
-        <span class="comment">// Multi-tenant: pass tenant identifier</span>
-        <span class="property">customParamsAuthRequest</span>: { <span class="property">tenant</span>: <span class="string">'@Model.TenantIdentifier'</span> },
       }
     })
   ]
@@ -381,6 +381,7 @@
 .<span class="function">AddCookie</span>(<span class="string">"Cookies"</span>)
 .<span class="function">AddOpenIdConnect</span>(<span class="string">"OpenIdConnect"</span>, <span class="property">options</span> =>
 {
+    <span class="comment">// Authority includes tenant: /{tenantId}</span>
     <span class="property">options</span>.<span class="property">Authority</span> = <span class="string">"@Model.Authority"</span>;
     <span class="property">options</span>.<span class="property">ClientId</span> = <span class="string">"@Model.Client.ClientId"</span>;
     <span class="property">options</span>.<span class="property">ClientSecret</span> = <span class="string">"YOUR_CLIENT_SECRET"</span>;
@@ -390,12 +391,6 @@
     <span class="comment">// Add your scopes: @string.Join(", ", Model.Client.AllowedScopes)</span>
     <span class="property">options</span>.<span class="property">Scope</span>.<span class="function">Add</span>(<span class="string">"openid"</span>);
     <span class="property">options</span>.<span class="property">Scope</span>.<span class="function">Add</span>(<span class="string">"profile"</span>);
-    <span class="comment">// Multi-tenant: pass tenant identifier</span>
-    <span class="property">options</span>.<span class="property">Events</span>.<span class="property">OnRedirectToIdentityProvider</span> = <span class="property">ctx</span> =>
-    {
-        <span class="property">ctx</span>.<span class="property">ProtocolMessage</span>.<span class="function">SetParameter</span>(<span class="string">"tenant"</span>, <span class="string">"@Model.TenantIdentifier"</span>);
-        <span class="keyword">return</span> <span class="type">Task</span>.<span class="property">CompletedTask</span>;
-    };
 });
 
 <span class="property">app</span>.<span class="function">UseAuthentication</span>();
@@ -410,14 +405,13 @@
                                             <p class="small text-muted mb-2">For Blazor WebAssembly, add to Program.cs:</p>
                                             <pre class="code-block mb-0"><code><span class="property">builder</span>.<span class="property">Services</span>.<span class="function">AddOidcAuthentication</span>(<span class="property">options</span> =>
 {
+    <span class="comment">// Authority includes tenant: /{tenantId}</span>
     <span class="property">options</span>.<span class="property">ProviderOptions</span>.<span class="property">Authority</span> = <span class="string">"@Model.Authority"</span>;
     <span class="property">options</span>.<span class="property">ProviderOptions</span>.<span class="property">ClientId</span> = <span class="string">"@Model.Client.ClientId"</span>;
     <span class="property">options</span>.<span class="property">ProviderOptions</span>.<span class="property">ResponseType</span> = <span class="string">"code"</span>;
     <span class="comment">// Add your scopes: @string.Join(", ", Model.Client.AllowedScopes)</span>
     <span class="property">options</span>.<span class="property">ProviderOptions</span>.<span class="property">DefaultScopes</span>.<span class="function">Add</span>(<span class="string">"openid"</span>);
     <span class="property">options</span>.<span class="property">ProviderOptions</span>.<span class="property">DefaultScopes</span>.<span class="function">Add</span>(<span class="string">"profile"</span>);
-    <span class="comment">// Multi-tenant: pass tenant identifier</span>
-    <span class="property">options</span>.<span class="property">ProviderOptions</span>.<span class="property">AdditionalProviderParameters</span>.<span class="function">Add</span>(<span class="string">"tenant"</span>, <span class="string">"@Model.TenantIdentifier"</span>);
 });
 
 <span class="comment">// In your component:</span>

@@ -86,11 +86,25 @@ var app = builder.Build();
 
 app.MapDefaultEndpoints();
 
-// Ensure search database schema is created
-using (var scope = app.Services.CreateScope())
+
+if(isLocalDevelopment)
 {
-    var dbContext = scope.ServiceProvider.GetRequiredService<SearchDesignTimeContext>();
-    await dbContext.Database.MigrateAsync();
+    // Ensure search database schema is created
+    using (var scope = app.Services.CreateScope())
+    {
+        var dbContext = scope.ServiceProvider.GetRequiredService<SearchDesignTimeContext>();
+        await dbContext.Database.EnsureCreatedAsync();
+    }
 }
+else
+{
+    // Ensure search database schema is created
+    using (var scope = app.Services.CreateScope())
+    {
+        var dbContext = scope.ServiceProvider.GetRequiredService<SearchDesignTimeContext>();
+        await dbContext.Database.MigrateAsync();
+    }
+}
+
 
 app.Run();

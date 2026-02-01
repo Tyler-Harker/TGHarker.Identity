@@ -22,11 +22,20 @@
 
 <h3>Flow Diagram</h3>
 <pre><code>1. User clicks "Login"
-2. App redirects to /connect/authorize
+2. App redirects to /{tenantId}/connect/authorize
 3. User authenticates with Harker Identity
 4. Identity redirects back with authorization code
-5. App exchanges code for tokens at /connect/token
+5. App exchanges code for tokens at /{tenantId}/connect/token
 6. App receives access_token, id_token, refresh_token</code></pre>
+
+<h3>Endpoints</h3>
+<p>All OAuth/OIDC endpoints use tenant-prefixed URLs:</p>
+<ul>
+    <li><code>/{tenantId}/.well-known/openid-configuration</code> - Discovery document</li>
+    <li><code>/{tenantId}/connect/authorize</code> - Authorization endpoint</li>
+    <li><code>/{tenantId}/connect/token</code> - Token endpoint</li>
+    <li><code>/{tenantId}/connect/userinfo</code> - User info endpoint</li>
+</ul>
 
 <h3>Required Parameters</h3>
 <table>
@@ -38,11 +47,6 @@
         </tr>
     </thead>
     <tbody>
-        <tr>
-            <td><code>tenant</code></td>
-            <td>Yes*</td>
-            <td>Tenant identifier (can also use <code>X-Tenant-Id</code> header or subdomain)</td>
-        </tr>
         <tr>
             <td><code>response_type</code></td>
             <td>Yes</td>
@@ -91,7 +95,7 @@
 </div>
 
 <h3>Token Request</h3>
-<pre><code>POST /connect/token
+<pre><code>POST /{tenantId}/connect/token
 Content-Type: application/x-www-form-urlencoded
 Authorization: Basic BASE64(client_id:client_secret)
 
@@ -111,7 +115,7 @@ grant_type=client_credentials
 </p>
 
 <h3>Token Request</h3>
-<pre><code>POST /connect/token
+<pre><code>POST /{tenantId}/connect/token
 Content-Type: application/x-www-form-urlencoded
 
 grant_type=refresh_token
@@ -157,7 +161,7 @@ async function generateCodeChallenge(verifier) {
     To log a user out, redirect them to the end session endpoint:
 </p>
 
-<pre><code>GET /connect/endsession?
+<pre><code>GET /{tenantId}/connect/endsession?
   id_token_hint=USER_ID_TOKEN
   &post_logout_redirect_uri=https://yourapp.com/logged-out</code></pre>
 

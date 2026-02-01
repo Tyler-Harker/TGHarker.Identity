@@ -67,7 +67,7 @@ public class ForgotPasswordModel : TenantAuthPageModel
                 var resetToken = await userGrain.GeneratePasswordResetTokenAsync();
 
                 // TODO: Send email with reset link
-                // The reset link would be: /Tenant/{TenantId}/ResetPassword?token={resetToken}&email={email}
+                // The reset link would be: /tenant/{tenantId}/reset-password?token={resetToken}&email={email}
                 Logger.LogInformation(
                     "Password reset requested for user {UserId} in tenant {TenantId}. Token: {Token}",
                     userId, Tenant.Id, resetToken);

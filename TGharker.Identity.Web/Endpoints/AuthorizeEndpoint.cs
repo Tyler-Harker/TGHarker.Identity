@@ -17,6 +17,12 @@ public static class AuthorizeEndpoint
             .WithName("Authorize")
             .WithTags("OAuth2");
 
+        // Tenant-prefixed route: /{tenantId}/connect/authorize
+        endpoints.MapGet("/{tenantId}/connect/authorize", HandleAuthorizeRequest)
+            .AllowAnonymous()
+            .WithName("AuthorizeWithTenant")
+            .WithTags("OAuth2");
+
         return endpoints;
     }
 
@@ -105,7 +111,7 @@ public static class AuthorizeEndpoint
         {
             // Redirect to tenant-specific login
             var returnUrl = context.Request.Path + context.Request.QueryString;
-            var loginUrl = $"/Tenant/{tenant.Identifier}/Login?returnUrl={HttpUtility.UrlEncode(returnUrl)}";
+            var loginUrl = $"/tenant/{tenant.Identifier}/login?returnUrl={HttpUtility.UrlEncode(returnUrl)}";
             return Results.Redirect(loginUrl);
         }
 

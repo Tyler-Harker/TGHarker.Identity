@@ -95,12 +95,18 @@ public class OAuthCorsMiddleware
 
     private static bool IsDiscoveryPath(string path)
     {
-        return DiscoveryPaths.Any(p => path.Equals(p, StringComparison.OrdinalIgnoreCase));
+        // Check exact match or tenant-prefixed match (e.g., /{tenantId}/.well-known/...)
+        return DiscoveryPaths.Any(p =>
+            path.Equals(p, StringComparison.OrdinalIgnoreCase) ||
+            path.EndsWith(p, StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool IsOAuthPath(string path)
     {
-        return OAuthPaths.Any(p => path.Equals(p, StringComparison.OrdinalIgnoreCase));
+        // Check exact match or tenant-prefixed match (e.g., /{tenantId}/connect/...)
+        return OAuthPaths.Any(p =>
+            path.Equals(p, StringComparison.OrdinalIgnoreCase) ||
+            path.EndsWith(p, StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool IsPreflightRequest(HttpContext context)

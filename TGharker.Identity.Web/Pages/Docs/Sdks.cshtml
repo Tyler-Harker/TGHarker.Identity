@@ -93,7 +93,8 @@ oauth.register(
     name='tgharker',
     client_id='your-client-id',
     client_secret='your-client-secret',
-    server_metadata_url='https://your-identity-server.com/.well-known/openid-configuration',
+    # Include tenant in the URL path
+    server_metadata_url='https://identity.example.com/{tenantId}/.well-known/openid-configuration',
     client_kwargs={'scope': 'openid profile email'}
 )
 

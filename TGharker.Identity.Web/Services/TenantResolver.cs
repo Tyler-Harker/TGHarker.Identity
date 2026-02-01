@@ -78,12 +78,27 @@ public sealed class TenantResolver : ITenantResolver
         return null;
     }
 
+    private static readonly HashSet<string> KnownRoutes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".well-known", "connect", "account", "admin", "docs", "stats", "tenants", "tenant", "api"
+    };
+
     private static string? ExtractTenantFromPath(PathString path)
     {
         var segments = path.Value?.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (segments == null || segments.Length == 0)
+            return null;
+
+        // Strategy A: /tenants/{tenantId}/... (legacy format)
         if (segments is { Length: > 1 } && segments[0] == "tenants")
         {
             return segments[1];
+        }
+
+        // Strategy B: /{tenantId}/... where first segment is not a known route
+        if (segments.Length >= 1 && !KnownRoutes.Contains(segments[0]))
+        {
+            return segments[0];
         }
 
         return null;

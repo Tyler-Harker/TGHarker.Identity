@@ -32,8 +32,21 @@ public sealed class TenantResolver : ITenantResolver
         {
             return headerTenant.ToString();
         }
+        
+        // Strategy 2: Path segment (e.g., /tenants/{tenantId}/connect/token)
+        var pathTenant = ExtractTenantFromPath(context.Request.Path);
+        if (!string.IsNullOrEmpty(pathTenant))
+        {
+            return pathTenant;
+        }
 
-        // Strategy 2: Subdomain (e.g., acme.identity.example.com)
+        // Strategy 3: Query parameter
+        if (context.Request.Query.TryGetValue("tenant", out var queryTenant))
+        {
+            return queryTenant.ToString();
+        }
+
+        // Strategy 4: Subdomain (e.g., acme.identity.example.com)
         var host = context.Request.Host.Host;
         var subdomain = ExtractSubdomain(host);
         if (!string.IsNullOrEmpty(subdomain))
@@ -41,18 +54,7 @@ public sealed class TenantResolver : ITenantResolver
             return subdomain;
         }
 
-        // Strategy 3: Path segment (e.g., /tenants/{tenantId}/connect/token)
-        var pathTenant = ExtractTenantFromPath(context.Request.Path);
-        if (!string.IsNullOrEmpty(pathTenant))
-        {
-            return pathTenant;
-        }
-
-        // Strategy 4: Query parameter
-        if (context.Request.Query.TryGetValue("tenant", out var queryTenant))
-        {
-            return queryTenant.ToString();
-        }
+        
 
         return null;
     }

@@ -29,7 +29,14 @@
 
 <form method="post">
     <input type="hidden" asp-for="TenantId" />
-    <input type="hidden" asp-for="ReturnUrl" />
+    <input type="hidden" asp-for="ClientId" />
+    <input type="hidden" asp-for="Scope" />
+    <input type="hidden" asp-for="RedirectUri" />
+    <input type="hidden" asp-for="State" />
+    <input type="hidden" asp-for="Nonce" />
+    <input type="hidden" asp-for="CodeChallenge" />
+    <input type="hidden" asp-for="CodeChallengeMethod" />
+    <input type="hidden" asp-for="ResponseMode" />
 
     <div class="mb-3">
         <label asp-for="Input.OrganizationName" class="form-label">

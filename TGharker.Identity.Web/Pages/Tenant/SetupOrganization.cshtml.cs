@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Web;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TGHarker.Identity.Abstractions.Grains;
@@ -31,6 +32,31 @@ public class SetupOrganizationModel : TenantAuthPageModel
 
     public UserFlowSettings? UserFlow { get; set; }
 
+    // OAuth parameters passed through individually to avoid URL encoding issues
+    [BindProperty(SupportsGet = true)]
+    public string? ClientId { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public string? Scope { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public string? RedirectUri { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public string? State { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public string? Nonce { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public string? CodeChallenge { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public string? CodeChallengeMethod { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public string? ResponseMode { get; set; }
+
     public class InputModel
     {
         [Display(Name = "Organization Name")]
@@ -59,6 +85,9 @@ public class SetupOrganizationModel : TenantAuthPageModel
             return RedirectToPage("/Tenant/Login", new { tenantId = TenantId, returnUrl = ReturnUrl });
         }
 
+        // Parse OAuth parameters from ReturnUrl if not already set
+        ParseOAuthParametersFromReturnUrl();
+
         // Check if user already has an organization
         var userGrain = ClusterClient.GetGrain<IUserGrain>($"user-{userId}");
         var user = await userGrain.GetStateAsync();
@@ -71,8 +100,8 @@ public class SetupOrganizationModel : TenantAuthPageModel
 
             if (userOrgs.Count > 0)
             {
-                // User already has an organization, redirect to return URL
-                return Redirect(GetEffectiveReturnUrl());
+                // User already has an organization, redirect to authorize
+                return RedirectToAuthorize(userOrgs[0].OrganizationId);
             }
         }
 
@@ -81,7 +110,7 @@ public class SetupOrganizationModel : TenantAuthPageModel
         if (UserFlow == null || !UserFlow.OrganizationsEnabled)
         {
             // No organization required, redirect
-            return Redirect(GetEffectiveReturnUrl());
+            return RedirectToAuthorize(null);
         }
 
         return Page();
@@ -106,7 +135,7 @@ public class SetupOrganizationModel : TenantAuthPageModel
 
         if (UserFlow == null || !UserFlow.OrganizationsEnabled)
         {
-            return Redirect(GetEffectiveReturnUrl());
+            return RedirectToAuthorize(null);
         }
 
         // Validate organization name is required for Prompt mode
@@ -148,7 +177,78 @@ public class SetupOrganizationModel : TenantAuthPageModel
             "Created organization {OrganizationId} for existing user {UserId}",
             orgResult.OrganizationId, userId);
 
-        return Redirect(GetEffectiveReturnUrl());
+        return RedirectToAuthorize(orgResult.OrganizationId);
+    }
+
+    private void ParseOAuthParametersFromReturnUrl()
+    {
+        if (string.IsNullOrEmpty(ReturnUrl))
+            return;
+
+        // If OAuth parameters are already set (from form post), don't override
+        if (!string.IsNullOrEmpty(ClientId))
+            return;
+
+        try
+        {
+            // ReturnUrl might be URL-encoded, so decode it first
+            var decodedUrl = HttpUtility.UrlDecode(ReturnUrl);
+
+            // Parse query string from the return URL
+            var queryIndex = decodedUrl.IndexOf('?');
+            if (queryIndex < 0)
+                return;
+
+            var queryString = decodedUrl[(queryIndex + 1)..];
+            var queryParams = HttpUtility.ParseQueryString(queryString);
+
+            ClientId = queryParams["client_id"];
+            Scope = queryParams["scope"];
+            RedirectUri = queryParams["redirect_uri"];
+            State = queryParams["state"];
+            Nonce = queryParams["nonce"];
+            CodeChallenge = queryParams["code_challenge"];
+            CodeChallengeMethod = queryParams["code_challenge_method"];
+            ResponseMode = queryParams["response_mode"];
+
+            Logger.LogDebug(
+                "Parsed OAuth params from ReturnUrl - ClientId: {ClientId}, State: {State}",
+                ClientId, State);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to parse OAuth parameters from ReturnUrl: {ReturnUrl}", ReturnUrl);
+        }
+    }
+
+    private IActionResult RedirectToAuthorize(string? organizationId)
+    {
+        // If we don't have OAuth parameters, fall back to simple redirect
+        if (string.IsNullOrEmpty(ClientId))
+        {
+            Logger.LogWarning("No OAuth parameters available, using fallback redirect");
+            return Redirect(GetEffectiveReturnUrl());
+        }
+
+        var authorizeUrl = $"/tenant/{Tenant!.Identifier}/connect/authorize?" +
+            $"response_type=code" +
+            $"&client_id={HttpUtility.UrlEncode(ClientId)}" +
+            $"&redirect_uri={HttpUtility.UrlEncode(RedirectUri)}" +
+            $"&scope={HttpUtility.UrlEncode(Scope)}" +
+            $"&state={HttpUtility.UrlEncode(State)}" +
+            $"&nonce={HttpUtility.UrlEncode(Nonce)}" +
+            $"&code_challenge={HttpUtility.UrlEncode(CodeChallenge)}" +
+            $"&code_challenge_method={HttpUtility.UrlEncode(CodeChallengeMethod)}" +
+            $"&response_mode={HttpUtility.UrlEncode(ResponseMode)}";
+
+        if (!string.IsNullOrEmpty(organizationId))
+        {
+            authorizeUrl += $"&organization_id={HttpUtility.UrlEncode(organizationId)}";
+        }
+
+        Logger.LogInformation("Redirecting to authorize: {AuthorizeUrl}", authorizeUrl);
+
+        return Redirect(authorizeUrl);
     }
 
     private async Task LoadUserFlowAsync()
@@ -156,6 +256,14 @@ public class SetupOrganizationModel : TenantAuthPageModel
         if (Tenant == null)
             return;
 
-        UserFlow = await _userFlowService.ResolveUserFlowFromReturnUrlAsync(Tenant.Id, ReturnUrl);
+        // Use ClientId to resolve user flow directly if available
+        if (!string.IsNullOrEmpty(ClientId))
+        {
+            UserFlow = await _userFlowService.GetUserFlowForClientAsync(Tenant.Id, ClientId);
+        }
+        else
+        {
+            UserFlow = await _userFlowService.ResolveUserFlowFromReturnUrlAsync(Tenant.Id, ReturnUrl);
+        }
     }
 }

@@ -134,8 +134,8 @@ public class LoginModel : TenantAuthPageModel
 
                 Logger.LogInformation("User {UserId} logged in but needs organization setup", userId);
 
-                // Redirect to organization setup page
-                var setupUrl = $"/tenant/{TenantId}/setup-organization?returnUrl={HttpUtility.UrlEncode(ReturnUrl)}";
+                // Redirect to organization setup page with OAuth parameters preserved individually
+                var setupUrl = BuildSetupOrganizationUrl();
                 return Redirect(setupUrl);
             }
         }
@@ -178,5 +178,49 @@ public class LoginModel : TenantAuthPageModel
             32);
 
         return CryptographicOperations.FixedTimeEquals(storedHash, computedHash);
+    }
+
+    private string BuildSetupOrganizationUrl()
+    {
+        var baseUrl = $"/tenant/{TenantId}/setup-organization";
+
+        // If ReturnUrl is not an authorize URL, just pass it through
+        if (string.IsNullOrEmpty(ReturnUrl) || !ReturnUrl.Contains("/connect/authorize"))
+        {
+            return $"{baseUrl}?returnUrl={HttpUtility.UrlEncode(ReturnUrl)}";
+        }
+
+        // Parse OAuth parameters from ReturnUrl to avoid double-encoding issues
+        try
+        {
+            var decodedUrl = HttpUtility.UrlDecode(ReturnUrl);
+            var queryIndex = decodedUrl.IndexOf('?');
+            if (queryIndex < 0)
+            {
+                return $"{baseUrl}?returnUrl={HttpUtility.UrlEncode(ReturnUrl)}";
+            }
+
+            var queryString = decodedUrl[(queryIndex + 1)..];
+            var queryParams = HttpUtility.ParseQueryString(queryString);
+
+            var setupUrl = $"{baseUrl}?" +
+                $"client_id={HttpUtility.UrlEncode(queryParams["client_id"])}" +
+                $"&scope={HttpUtility.UrlEncode(queryParams["scope"])}" +
+                $"&redirect_uri={HttpUtility.UrlEncode(queryParams["redirect_uri"])}" +
+                $"&state={HttpUtility.UrlEncode(queryParams["state"])}" +
+                $"&nonce={HttpUtility.UrlEncode(queryParams["nonce"])}" +
+                $"&code_challenge={HttpUtility.UrlEncode(queryParams["code_challenge"])}" +
+                $"&code_challenge_method={HttpUtility.UrlEncode(queryParams["code_challenge_method"])}" +
+                $"&response_mode={HttpUtility.UrlEncode(queryParams["response_mode"])}";
+
+            Logger.LogDebug("Built setup organization URL with individual OAuth params, state={State}", queryParams["state"]);
+
+            return setupUrl;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to parse OAuth params from ReturnUrl, using fallback");
+            return $"{baseUrl}?returnUrl={HttpUtility.UrlEncode(ReturnUrl)}";
+        }
     }
 }

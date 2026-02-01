@@ -1106,6 +1106,103 @@ public class OidcFlowTests
     }
 
     [Fact]
+    public async Task AlreadyLoggedIn_NoOrg_RedirectsToSetupOrganization_PreservesState()
+    {
+        // Test the scenario where user is already authenticated but has no organization
+        // and then visits /authorize - should redirect to setup-organization
+        var tenant = await _fixture.DataBuilder.CreateTenantAsync(
+            identifier: $"test-already-auth-{Guid.NewGuid():N}",
+            name: "Test Tenant Already Auth");
+
+        var (client, _) = await _fixture.DataBuilder.CreateClientAsync(
+            tenantId: tenant.Id,
+            clientIdentifier: $"client-already-auth-{Guid.NewGuid():N}",
+            redirectUris: ["https://localhost:5001/signin-oidc"],
+            userFlowSettings: new UserFlowSettings
+            {
+                OrganizationsEnabled = true,
+                OrganizationMode = OrganizationRegistrationMode.Prompt,
+                RequireOrganizationName = true
+            });
+
+        // Create user WITHOUT an organization
+        var user = await _fixture.DataBuilder.CreateUserAsync(
+            tenantId: tenant.Id,
+            email: $"user-already-auth-{Guid.NewGuid():N}@example.com",
+            password: "TestPassword123!");
+
+        var oidcClient = new TestOidcClient(
+            _fixture.BaseAddress,
+            tenant.Identifier,
+            client.ClientId,
+            "https://localhost:5001/signin-oidc");
+
+        await using var context = await _fixture.CreateBrowserContextAsync();
+        var page = await context.NewPageAsync();
+
+        string? finalUrl = null;
+        var redirectTcs = new TaskCompletionSource<string>();
+
+        page.Request += (_, request) =>
+        {
+            Console.WriteLine($">> {request.Method} {request.Url}");
+            if (request.Url.StartsWith("https://localhost:5001/"))
+            {
+                finalUrl = request.Url;
+                redirectTcs.TrySetResult(finalUrl);
+            }
+        };
+        page.Response += (_, response) => Console.WriteLine($"<< {response.Status} {response.Url}");
+
+        // First, log in to establish a session
+        var initialAuthRequest = oidcClient.BuildAuthorizationRequest();
+        Console.WriteLine($"Initial auth state: {initialAuthRequest.State}");
+
+        await page.GotoAsync(initialAuthRequest.Url);
+        await page.WaitForURLAsync(url => url.Contains("/login"), new() { Timeout = 10000 });
+
+        await page.FillAsync("input[name='Input.Email']", user.Email);
+        await page.FillAsync("input[name='Input.Password']", "TestPassword123!");
+        await page.ClickAsync("button[type='submit']");
+
+        // Should redirect to setup-organization
+        await page.WaitForURLAsync(url => url.Contains("/setup-organization"), new() { Timeout = 10000 });
+        Console.WriteLine($"First visit setup-organization URL: {page.Url}");
+
+        // Now, simulate the user navigating AWAY and then coming back with a NEW authorize request
+        // This simulates the case where user is already logged in but hasn't completed org setup
+        var newAuthRequest = oidcClient.BuildAuthorizationRequest();
+        Console.WriteLine($"New auth state: {newAuthRequest.State}");
+
+        // Navigate directly to /authorize with a new state (simulating a fresh OAuth flow)
+        await page.GotoAsync(newAuthRequest.Url);
+
+        // Since user is already authenticated but has no org, should go to setup-organization
+        await page.WaitForURLAsync(url => url.Contains("/setup-organization"), new() { Timeout = 10000 });
+        Console.WriteLine($"Second visit setup-organization URL: {page.Url}");
+
+        // Verify the NEW state is in the URL
+        Assert.Contains($"state={Uri.EscapeDataString(newAuthRequest.State)}", page.Url);
+
+        // Verify state is preserved in hidden field
+        var stateField = await page.Locator("input[name='State']").GetAttributeAsync("value");
+        Console.WriteLine($"State field: {stateField}");
+        Assert.Equal(newAuthRequest.State, stateField);
+
+        // Complete the flow
+        await page.FillAsync("input[name='Input.OrganizationName']", "My Organization");
+        await page.ClickAsync("button[type='submit']");
+
+        finalUrl = await redirectTcs.Task.WaitAsync(TimeSpan.FromSeconds(15));
+
+        // Assert the NEW state is returned (not the old one)
+        var response = TestOidcClient.ParseAuthorizationResponse(finalUrl);
+        Assert.True(response.IsSuccess, $"Expected success but got error: {response.Error} - {response.ErrorDescription}");
+        Assert.Equal(newAuthRequest.State, response.State);
+        Assert.NotEmpty(response.Code!);
+    }
+
+    [Fact]
     public async Task OrganizationMode_Prompt_RequiredName_ValidationError_PreservesState()
     {
         // Test that validation errors preserve state when org name is required but empty

@@ -132,6 +132,31 @@ public static class AuthorizeEndpoint
         // Determine selected organization
         string? selectedOrgId = context.Request.Query["organization_id"].FirstOrDefault();
 
+        // Check if user needs to set up an organization (has no orgs but client requires one)
+        if (userOrgs.Count == 0 && string.IsNullOrEmpty(selectedOrgId) && prompt != "none")
+        {
+            // Get client's UserFlow settings to see if organizations are required
+            var userFlow = await clientGrain.GetUserFlowSettingsAsync();
+            // Only redirect to setup for Prompt and AutoCreate modes
+            // OptionalPrompt allows users to skip organization creation
+            if (userFlow?.OrganizationsEnabled == true &&
+                (userFlow.OrganizationMode == OrganizationRegistrationMode.Prompt ||
+                 userFlow.OrganizationMode == OrganizationRegistrationMode.AutoCreate))
+            {
+                // User needs to set up an organization - redirect to setup page
+                var setupUrl = $"/tenant/{tenant.Identifier}/setup-organization?" +
+                    $"client_id={Uri.EscapeDataString(clientId ?? "")}" +
+                    $"&scope={Uri.EscapeDataString(scope ?? "")}" +
+                    $"&redirect_uri={Uri.EscapeDataString(redirectUri ?? "")}" +
+                    $"&state={Uri.EscapeDataString(state ?? "")}" +
+                    $"&nonce={Uri.EscapeDataString(nonce ?? "")}" +
+                    $"&code_challenge={Uri.EscapeDataString(codeChallenge ?? "")}" +
+                    $"&code_challenge_method={Uri.EscapeDataString(codeChallengeMethod ?? "")}" +
+                    $"&response_mode={Uri.EscapeDataString(responseMode ?? "")}";
+                return Results.Redirect(setupUrl);
+            }
+        }
+
         // If user has organizations but none selected, check for default or redirect to picker
         if (userOrgs.Count > 0 && string.IsNullOrEmpty(selectedOrgId))
         {

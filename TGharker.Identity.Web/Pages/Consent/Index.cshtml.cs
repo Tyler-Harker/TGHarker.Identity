@@ -62,6 +62,17 @@ public class IndexModel : PageModel
         public bool IsRequired { get; set; }
     }
 
+    // Standard OIDC scopes with their display names and required status
+    private static readonly Dictionary<string, (string DisplayName, string? Description, bool IsRequired)> StandardScopes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["openid"] = ("OpenID", "Verify your identity", true),
+        ["profile"] = ("Profile", "Access your basic profile information", false),
+        ["email"] = ("Email", "Access your email address", false),
+        ["address"] = ("Address", "Access your address", false),
+        ["phone"] = ("Phone", "Access your phone number", false),
+        ["offline_access"] = ("Offline Access", "Stay signed in and refresh tokens", false)
+    };
+
     public async Task<IActionResult> OnGetAsync()
     {
         if (string.IsNullOrEmpty(ClientId) || string.IsNullOrEmpty(RedirectUri) || string.IsNullOrEmpty(Scope))
@@ -105,6 +116,17 @@ public class IndexModel : PageModel
                     IsRequired = scope.IsRequired
                 });
             }
+            else if (StandardScopes.TryGetValue(scopeName, out var standardScope))
+            {
+                // Standard OIDC scope - use predefined values
+                RequestedScopes.Add(new ScopeViewModel
+                {
+                    Name = scopeName,
+                    DisplayName = standardScope.DisplayName,
+                    Description = standardScope.Description,
+                    IsRequired = standardScope.IsRequired
+                });
+            }
             else
             {
                 // Custom scope
@@ -144,20 +166,31 @@ public class IndexModel : PageModel
 
         foreach (var scopeName in requestedScopeNames)
         {
+            // Check if it's a standard required scope (like openid)
+            var isStandardRequired = StandardScopes.TryGetValue(scopeName, out var standardScope) && standardScope.IsRequired;
+
+            // Check if scope grain marks it as required
             var scopeGrain = _clusterClient.GetGrain<IScopeGrain>($"{tenantId}/scope-{scopeName}");
             var scope = await scopeGrain.GetStateAsync();
+            var isGrainRequired = scope?.IsRequired == true;
 
-            if (scope?.IsRequired == true || grantedScopes.Contains(scopeName))
+            // Include if required (by standard or grain) OR if user granted it
+            if (isStandardRequired || isGrainRequired || grantedScopes.Contains(scopeName))
             {
                 finalScopes.Add(scopeName);
             }
         }
 
+        _logger.LogInformation("Final scopes for consent: {Scopes}", string.Join(" ", finalScopes));
+
         // Generate authorization code
         var code = GenerateSecureCode();
         var codeHash = HashCode(code);
+        var grainKey = $"{tenantId}/code-{codeHash}";
 
-        var codeGrain = _clusterClient.GetGrain<IAuthorizationCodeGrain>($"{tenantId}/code-{codeHash}");
+        _logger.LogInformation("Creating authorization code grain: {GrainKey}", grainKey);
+
+        var codeGrain = _clusterClient.GetGrain<IAuthorizationCodeGrain>(grainKey);
 
         var tenantGrain = _clusterClient.GetGrain<ITenantGrain>(tenantId);
         var tenant = await tenantGrain.GetStateAsync();

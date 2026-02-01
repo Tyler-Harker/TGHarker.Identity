@@ -32,46 +32,74 @@ public static class TokenEndpoint
         ITenantResolver tenantResolver,
         IClientAuthenticationService clientAuthService,
         IJwtTokenGenerator tokenGenerator,
-        IClusterClient clusterClient)
+        IClusterClient clusterClient,
+        ILogger<Program> logger)
     {
-        var tenant = await tenantResolver.ResolveAsync(context);
-        if (tenant == null)
-            return Results.NotFound(new { error = "tenant_not_found" });
-
-        // Authenticate client
-        var clientResult = await clientAuthService.AuthenticateAsync(context, tenant.Id);
-        if (!clientResult.IsSuccess)
+        try
         {
+            logger.LogInformation("Token request received. Path: {Path}", context.Request.Path);
+
+            var tenant = await tenantResolver.ResolveAsync(context);
+            if (tenant == null)
+            {
+                logger.LogWarning("Tenant not found for token request");
+                return Results.NotFound(new { error = "tenant_not_found" });
+            }
+
+            logger.LogInformation("Tenant resolved: {TenantId}, Identifier: {TenantIdentifier}", tenant.Id, tenant.Identifier);
+
+            // Authenticate client
+            var clientResult = await clientAuthService.AuthenticateAsync(context, tenant.Id);
+            if (!clientResult.IsSuccess)
+            {
+                logger.LogWarning("Client authentication failed: {Error} - {Description}", clientResult.Error, clientResult.ErrorDescription);
+                return Results.Json(new TokenErrorResponse
+                {
+                    Error = clientResult.Error!,
+                    ErrorDescription = clientResult.ErrorDescription
+                }, statusCode: 401);
+            }
+
+            var client = clientResult.Client!;
+            logger.LogInformation("Client authenticated: {ClientId}", client.ClientId);
+
+            var form = await context.Request.ReadFormAsync();
+            var grantType = form["grant_type"].FirstOrDefault();
+            logger.LogInformation("Grant type: {GrantType}", grantType);
+
+            var result = grantType switch
+            {
+                GrantTypes.AuthorizationCode => await HandleAuthorizationCodeAsync(
+                    context, tenant, client, form, tokenGenerator, clusterClient, logger),
+                GrantTypes.ClientCredentials => await HandleClientCredentialsAsync(
+                    context, tenant, client, form, tokenGenerator),
+                GrantTypes.RefreshToken => await HandleRefreshTokenAsync(
+                    context, tenant, client, form, tokenGenerator, clusterClient),
+                _ => TokenResult.Error("unsupported_grant_type", "The grant type is not supported")
+            };
+
+            if (result.IsSuccess)
+            {
+                logger.LogInformation("Token request successful for client {ClientId}", client.ClientId);
+                return Results.Ok(result.Response);
+            }
+
+            logger.LogWarning("Token request failed: {Error} - {Description}", result.ErrorCode, result.ErrorDescription);
             return Results.Json(new TokenErrorResponse
             {
-                Error = clientResult.Error!,
-                ErrorDescription = clientResult.ErrorDescription
-            }, statusCode: 401);
+                Error = result.ErrorCode!,
+                ErrorDescription = result.ErrorDescription
+            }, statusCode: 400);
         }
-
-        var client = clientResult.Client!;
-        var form = await context.Request.ReadFormAsync();
-        var grantType = form["grant_type"].FirstOrDefault();
-
-        var result = grantType switch
+        catch (Exception ex)
         {
-            GrantTypes.AuthorizationCode => await HandleAuthorizationCodeAsync(
-                context, tenant, client, form, tokenGenerator, clusterClient),
-            GrantTypes.ClientCredentials => await HandleClientCredentialsAsync(
-                context, tenant, client, form, tokenGenerator),
-            GrantTypes.RefreshToken => await HandleRefreshTokenAsync(
-                context, tenant, client, form, tokenGenerator, clusterClient),
-            _ => TokenResult.Error("unsupported_grant_type", "The grant type is not supported")
-        };
-
-        if (result.IsSuccess)
-            return Results.Ok(result.Response);
-
-        return Results.Json(new TokenErrorResponse
-        {
-            Error = result.ErrorCode!,
-            ErrorDescription = result.ErrorDescription
-        }, statusCode: 400);
+            logger.LogError(ex, "Unhandled exception in token endpoint");
+            return Results.Json(new TokenErrorResponse
+            {
+                Error = "server_error",
+                ErrorDescription = ex.Message
+            }, statusCode: 500);
+        }
     }
 
     private static async Task<TokenResult> HandleAuthorizationCodeAsync(
@@ -80,11 +108,15 @@ public static class TokenEndpoint
         ClientState client,
         IFormCollection form,
         IJwtTokenGenerator tokenGenerator,
-        IClusterClient clusterClient)
+        IClusterClient clusterClient,
+        ILogger logger)
     {
         var code = form["code"].FirstOrDefault();
         var redirectUri = form["redirect_uri"].FirstOrDefault();
         var codeVerifier = form["code_verifier"].FirstOrDefault();
+
+        logger.LogInformation("Authorization code exchange. Code present: {CodePresent}, RedirectUri: {RedirectUri}, CodeVerifier present: {VerifierPresent}",
+            !string.IsNullOrEmpty(code), redirectUri, !string.IsNullOrEmpty(codeVerifier));
 
         if (string.IsNullOrEmpty(code))
             return TokenResult.Error("invalid_request", "Code is required");
@@ -94,15 +126,28 @@ public static class TokenEndpoint
 
         // Validate grant type is allowed
         if (!client.AllowedGrantTypes.Contains(GrantTypes.AuthorizationCode))
+        {
+            logger.LogWarning("Client {ClientId} not authorized for authorization_code grant. Allowed: {AllowedGrants}",
+                client.ClientId, string.Join(", ", client.AllowedGrantTypes));
             return TokenResult.Error("unauthorized_client", "Client is not authorized for this grant type");
+        }
 
         // Hash code to get grain key
         var codeHash = HashCode(code);
-        var codeGrain = clusterClient.GetGrain<IAuthorizationCodeGrain>($"{tenant.Id}/code-{codeHash}");
+        var grainKey = $"{tenant.Id}/code-{codeHash}";
+        logger.LogInformation("Looking up authorization code grain: {GrainKey}", grainKey);
+
+        var codeGrain = clusterClient.GetGrain<IAuthorizationCodeGrain>(grainKey);
 
         var authCode = await codeGrain.RedeemAsync(codeVerifier);
         if (authCode == null)
+        {
+            logger.LogWarning("Authorization code not found or already redeemed. GrainKey: {GrainKey}", grainKey);
             return TokenResult.Error("invalid_grant", "Invalid authorization code");
+        }
+
+        logger.LogInformation("Authorization code redeemed. UserId: {UserId}, Scopes: {Scopes}",
+            authCode.UserId, string.Join(" ", authCode.Scopes));
 
         // Validate redirect URI matches
         if (authCode.RedirectUri != redirectUri)
@@ -124,6 +169,7 @@ public static class TokenEndpoint
 
         // Issuer must include tenant prefix to match discovery document
         var baseUrl = $"{context.Request.Scheme}://{context.Request.Host}/tenant/{tenant.Identifier}";
+        logger.LogInformation("Generating tokens with issuer: {Issuer}", baseUrl);
 
         // Build identity claims based on scopes
         var identityClaims = await BuildIdentityClaimsAsync(user, membership, authCode.Scopes, clusterClient, tenant.Id);
@@ -144,10 +190,13 @@ public static class TokenEndpoint
             AdditionalClaims = additionalClaims
         };
 
+        logger.LogInformation("Generating access token for user {UserId}", authCode.UserId);
         var accessToken = await tokenGenerator.GenerateAccessTokenAsync(tokenContext);
+
         var idToken = authCode.Scopes.Contains(StandardScopes.OpenId)
             ? await tokenGenerator.GenerateIdTokenAsync(tokenContext)
             : null;
+        logger.LogInformation("Tokens generated. IdToken present: {IdTokenPresent}", idToken != null);
 
         // Generate refresh token if offline_access scope is present
         string? refreshToken = null;

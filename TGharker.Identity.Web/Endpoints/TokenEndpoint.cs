@@ -122,7 +122,8 @@ public static class TokenEndpoint
         var membershipGrain = clusterClient.GetGrain<ITenantMembershipGrain>($"{tenant.Id}/member-{authCode.UserId}");
         var membership = await membershipGrain.GetStateAsync();
 
-        var baseUrl = $"{context.Request.Scheme}://{context.Request.Host}";
+        // Issuer must include tenant prefix to match discovery document
+        var baseUrl = $"{context.Request.Scheme}://{context.Request.Host}/tenant/{tenant.Identifier}";
 
         // Build identity claims based on scopes
         var identityClaims = await BuildIdentityClaimsAsync(user, membership, authCode.Scopes, clusterClient, tenant.Id);
@@ -186,7 +187,8 @@ public static class TokenEndpoint
         // Validate scopes
         var validScopes = scopes.Where(s => client.AllowedScopes.Contains(s)).ToList();
 
-        var baseUrl = $"{context.Request.Scheme}://{context.Request.Host}";
+        // Issuer must include tenant prefix to match discovery document
+        var baseUrl = $"{context.Request.Scheme}://{context.Request.Host}/tenant/{tenant.Identifier}";
 
         var tokenContext = new TokenGenerationContext
         {
@@ -248,7 +250,8 @@ public static class TokenEndpoint
             scopes = requestedScopes;
         }
 
-        var baseUrl = $"{context.Request.Scheme}://{context.Request.Host}";
+        // Issuer must include tenant prefix to match discovery document
+        var baseUrl = $"{context.Request.Scheme}://{context.Request.Host}/tenant/{tenant.Identifier}";
         Dictionary<string, string> identityClaims = [];
         Dictionary<string, string> additionalClaims = [];
 

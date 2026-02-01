@@ -240,20 +240,21 @@ public class SetupOrganizationModel : TenantAuthPageModel
             return Redirect(GetEffectiveReturnUrl());
         }
 
+        // Use Uri.EscapeDataString to properly encode special characters like '+'
         var authorizeUrl = $"/tenant/{Tenant!.Identifier}/connect/authorize?" +
             $"response_type=code" +
-            $"&client_id={HttpUtility.UrlEncode(ClientId)}" +
-            $"&redirect_uri={HttpUtility.UrlEncode(RedirectUri)}" +
-            $"&scope={HttpUtility.UrlEncode(Scope)}" +
-            $"&state={HttpUtility.UrlEncode(State)}" +
-            $"&nonce={HttpUtility.UrlEncode(Nonce)}" +
-            $"&code_challenge={HttpUtility.UrlEncode(CodeChallenge)}" +
-            $"&code_challenge_method={HttpUtility.UrlEncode(CodeChallengeMethod)}" +
-            $"&response_mode={HttpUtility.UrlEncode(ResponseMode)}";
+            $"&client_id={Uri.EscapeDataString(ClientId ?? "")}" +
+            $"&redirect_uri={Uri.EscapeDataString(RedirectUri ?? "")}" +
+            $"&scope={Uri.EscapeDataString(Scope ?? "")}" +
+            $"&state={Uri.EscapeDataString(State ?? "")}" +
+            $"&nonce={Uri.EscapeDataString(Nonce ?? "")}" +
+            $"&code_challenge={Uri.EscapeDataString(CodeChallenge ?? "")}" +
+            $"&code_challenge_method={Uri.EscapeDataString(CodeChallengeMethod ?? "")}" +
+            $"&response_mode={Uri.EscapeDataString(ResponseMode ?? "")}";
 
         if (!string.IsNullOrEmpty(organizationId))
         {
-            authorizeUrl += $"&organization_id={HttpUtility.UrlEncode(organizationId)}";
+            authorizeUrl += $"&organization_id={Uri.EscapeDataString(organizationId)}";
         }
 
         Logger.LogInformation("Redirecting to authorize: {AuthorizeUrl}", authorizeUrl);

@@ -141,7 +141,16 @@ public static class AuthorizeEndpoint
             // If no default and multiple orgs, redirect to org picker
             if (string.IsNullOrEmpty(selectedOrgId) && userOrgs.Count > 1 && prompt != "none")
             {
-                var orgPickerUrl = $"/tenant/{tenant.Identifier}/select-organization?client_id={clientId}&scope={HttpUtility.UrlEncode(scope)}&redirect_uri={HttpUtility.UrlEncode(redirectUri)}&state={state}&nonce={nonce}&code_challenge={codeChallenge}&code_challenge_method={codeChallengeMethod}&response_mode={responseMode}";
+                // Use Uri.EscapeDataString to properly encode special characters like '+' as '%2B'
+                var orgPickerUrl = $"/tenant/{tenant.Identifier}/select-organization?" +
+                    $"client_id={Uri.EscapeDataString(clientId ?? "")}" +
+                    $"&scope={Uri.EscapeDataString(scope ?? "")}" +
+                    $"&redirect_uri={Uri.EscapeDataString(redirectUri ?? "")}" +
+                    $"&state={Uri.EscapeDataString(state ?? "")}" +
+                    $"&nonce={Uri.EscapeDataString(nonce ?? "")}" +
+                    $"&code_challenge={Uri.EscapeDataString(codeChallenge ?? "")}" +
+                    $"&code_challenge_method={Uri.EscapeDataString(codeChallengeMethod ?? "")}" +
+                    $"&response_mode={Uri.EscapeDataString(responseMode ?? "")}";
                 return Results.Redirect(orgPickerUrl);
             }
 
@@ -167,7 +176,17 @@ public static class AuthorizeEndpoint
         {
             // Check for existing grant
             // For now, always redirect to consent if required
-            var consentUrl = $"/tenant/{tenant.Identifier}/consent?client_id={clientId}&scope={HttpUtility.UrlEncode(scope)}&redirect_uri={HttpUtility.UrlEncode(redirectUri)}&state={state}&nonce={nonce}&code_challenge={codeChallenge}&code_challenge_method={codeChallengeMethod}&response_mode={responseMode}&organization_id={selectedOrgId}";
+            // Use Uri.EscapeDataString to properly encode special characters like '+' as '%2B'
+            var consentUrl = $"/tenant/{tenant.Identifier}/consent?" +
+                $"client_id={Uri.EscapeDataString(clientId ?? "")}" +
+                $"&scope={Uri.EscapeDataString(scope ?? "")}" +
+                $"&redirect_uri={Uri.EscapeDataString(redirectUri ?? "")}" +
+                $"&state={Uri.EscapeDataString(state ?? "")}" +
+                $"&nonce={Uri.EscapeDataString(nonce ?? "")}" +
+                $"&code_challenge={Uri.EscapeDataString(codeChallenge ?? "")}" +
+                $"&code_challenge_method={Uri.EscapeDataString(codeChallengeMethod ?? "")}" +
+                $"&response_mode={Uri.EscapeDataString(responseMode ?? "")}" +
+                $"&organization_id={Uri.EscapeDataString(selectedOrgId ?? "")}";
             return Results.Redirect(consentUrl);
         }
 

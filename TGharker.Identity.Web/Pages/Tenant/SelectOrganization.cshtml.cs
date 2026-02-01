@@ -20,28 +20,37 @@ public class SelectOrganizationModel : TenantAuthPageModel
     }
 
     // OAuth parameters passed through
+    // Note: Use FromQuery with explicit names to match OAuth2 snake_case convention
     [BindProperty(SupportsGet = true)]
+    [FromQuery(Name = "client_id")]
     public string? ClientId { get; set; }
 
     [BindProperty(SupportsGet = true)]
+    [FromQuery(Name = "scope")]
     public string? Scope { get; set; }
 
     [BindProperty(SupportsGet = true)]
+    [FromQuery(Name = "redirect_uri")]
     public string? RedirectUri { get; set; }
 
     [BindProperty(SupportsGet = true)]
+    [FromQuery(Name = "state")]
     public string? State { get; set; }
 
     [BindProperty(SupportsGet = true)]
+    [FromQuery(Name = "nonce")]
     public string? Nonce { get; set; }
 
     [BindProperty(SupportsGet = true)]
+    [FromQuery(Name = "code_challenge")]
     public string? CodeChallenge { get; set; }
 
     [BindProperty(SupportsGet = true)]
+    [FromQuery(Name = "code_challenge_method")]
     public string? CodeChallengeMethod { get; set; }
 
     [BindProperty(SupportsGet = true)]
+    [FromQuery(Name = "response_mode")]
     public string? ResponseMode { get; set; }
 
     [BindProperty]
@@ -181,20 +190,22 @@ public class SelectOrganizationModel : TenantAuthPageModel
 
     private IActionResult RedirectToAuthorize(string? organizationId)
     {
+        // Use Uri.EscapeDataString instead of HttpUtility.UrlEncode to properly encode
+        // special characters like '+' as '%2B' (UrlEncode treats + as space)
         var authorizeUrl = $"/tenant/{Tenant!.Identifier}/connect/authorize?" +
             $"response_type=code" +
-            $"&client_id={HttpUtility.UrlEncode(ClientId)}" +
-            $"&redirect_uri={HttpUtility.UrlEncode(RedirectUri)}" +
-            $"&scope={HttpUtility.UrlEncode(Scope)}" +
-            $"&state={HttpUtility.UrlEncode(State)}" +
-            $"&nonce={HttpUtility.UrlEncode(Nonce)}" +
-            $"&code_challenge={HttpUtility.UrlEncode(CodeChallenge)}" +
-            $"&code_challenge_method={HttpUtility.UrlEncode(CodeChallengeMethod)}" +
-            $"&response_mode={HttpUtility.UrlEncode(ResponseMode)}";
+            $"&client_id={Uri.EscapeDataString(ClientId ?? "")}" +
+            $"&redirect_uri={Uri.EscapeDataString(RedirectUri ?? "")}" +
+            $"&scope={Uri.EscapeDataString(Scope ?? "")}" +
+            $"&state={Uri.EscapeDataString(State ?? "")}" +
+            $"&nonce={Uri.EscapeDataString(Nonce ?? "")}" +
+            $"&code_challenge={Uri.EscapeDataString(CodeChallenge ?? "")}" +
+            $"&code_challenge_method={Uri.EscapeDataString(CodeChallengeMethod ?? "")}" +
+            $"&response_mode={Uri.EscapeDataString(ResponseMode ?? "")}";
 
         if (!string.IsNullOrEmpty(organizationId))
         {
-            authorizeUrl += $"&organization_id={HttpUtility.UrlEncode(organizationId)}";
+            authorizeUrl += $"&organization_id={Uri.EscapeDataString(organizationId)}";
         }
 
         return Redirect(authorizeUrl);

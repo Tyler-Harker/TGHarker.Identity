@@ -204,15 +204,17 @@ public class LoginModel : TenantAuthPageModel
             var queryString = decodedUrl[(queryIndex + 1)..];
             var queryParams = HttpUtility.ParseQueryString(queryString);
 
+            // Use Uri.EscapeDataString instead of HttpUtility.UrlEncode to properly encode
+            // special characters like '+' as '%2B' (UrlEncode treats + as space)
             var setupUrl = $"{baseUrl}?" +
-                $"client_id={HttpUtility.UrlEncode(queryParams["client_id"])}" +
-                $"&scope={HttpUtility.UrlEncode(queryParams["scope"])}" +
-                $"&redirect_uri={HttpUtility.UrlEncode(queryParams["redirect_uri"])}" +
-                $"&state={HttpUtility.UrlEncode(queryParams["state"])}" +
-                $"&nonce={HttpUtility.UrlEncode(queryParams["nonce"])}" +
-                $"&code_challenge={HttpUtility.UrlEncode(queryParams["code_challenge"])}" +
-                $"&code_challenge_method={HttpUtility.UrlEncode(queryParams["code_challenge_method"])}" +
-                $"&response_mode={HttpUtility.UrlEncode(queryParams["response_mode"])}";
+                $"client_id={Uri.EscapeDataString(queryParams["client_id"] ?? "")}" +
+                $"&scope={Uri.EscapeDataString(queryParams["scope"] ?? "")}" +
+                $"&redirect_uri={Uri.EscapeDataString(queryParams["redirect_uri"] ?? "")}" +
+                $"&state={Uri.EscapeDataString(queryParams["state"] ?? "")}" +
+                $"&nonce={Uri.EscapeDataString(queryParams["nonce"] ?? "")}" +
+                $"&code_challenge={Uri.EscapeDataString(queryParams["code_challenge"] ?? "")}" +
+                $"&code_challenge_method={Uri.EscapeDataString(queryParams["code_challenge_method"] ?? "")}" +
+                $"&response_mode={Uri.EscapeDataString(queryParams["response_mode"] ?? "")}";
 
             Logger.LogDebug("Built setup organization URL with individual OAuth params, state={State}", queryParams["state"]);
 

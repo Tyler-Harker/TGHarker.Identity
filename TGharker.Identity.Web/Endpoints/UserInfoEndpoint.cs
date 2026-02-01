@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using TGHarker.Identity.Abstractions.Grains;
 using TGHarker.Identity.Abstractions.Models;
 
@@ -8,24 +9,26 @@ public static class UserInfoEndpoint
 {
     public static IEndpointRouteBuilder MapUserInfoEndpoint(this IEndpointRouteBuilder endpoints)
     {
+        // UserInfo endpoint must use JWT bearer authentication (not cookie)
+        // This prevents redirect to login page when auth fails
         endpoints.MapGet("/connect/userinfo", HandleUserInfoRequest)
-            .RequireAuthorization()
+            .RequireAuthorization(policy => policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme))
             .WithName("UserInfoGet")
             .WithTags("OIDC");
 
         endpoints.MapPost("/connect/userinfo", HandleUserInfoRequest)
-            .RequireAuthorization()
+            .RequireAuthorization(policy => policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme))
             .WithName("UserInfoPost")
             .WithTags("OIDC");
 
         // Tenant-prefixed routes: /tenant/{tenantId}/connect/userinfo
         endpoints.MapGet("/tenant/{tenantId}/connect/userinfo", HandleUserInfoRequest)
-            .RequireAuthorization()
+            .RequireAuthorization(policy => policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme))
             .WithName("UserInfoGetWithTenant")
             .WithTags("OIDC");
 
         endpoints.MapPost("/tenant/{tenantId}/connect/userinfo", HandleUserInfoRequest)
-            .RequireAuthorization()
+            .RequireAuthorization(policy => policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme))
             .WithName("UserInfoPostWithTenant")
             .WithTags("OIDC");
 
@@ -34,14 +37,25 @@ public static class UserInfoEndpoint
 
     private static async Task<IResult> HandleUserInfoRequest(
         HttpContext context,
-        IClusterClient clusterClient)
+        IClusterClient clusterClient,
+        ILogger<Program> logger)
     {
+        logger.LogInformation("UserInfo request received. Path: {Path}, IsAuthenticated: {IsAuthenticated}",
+            context.Request.Path,
+            context.User.Identity?.IsAuthenticated ?? false);
+
         var userId = context.User.FindFirst("sub")?.Value;
         var tenantId = context.User.FindFirst("tenant_id")?.Value;
         var scopeClaim = context.User.FindFirst("scope")?.Value;
 
+        logger.LogInformation("UserInfo claims - UserId: {UserId}, TenantId: {TenantId}, Scope: {Scope}",
+            userId ?? "(null)", tenantId ?? "(null)", scopeClaim ?? "(null)");
+
         if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(tenantId))
-            return Results.Unauthorized();
+        {
+            logger.LogWarning("UserInfo request unauthorized - missing userId or tenantId");
+            return Results.Json(new { error = "unauthorized" }, statusCode: 401);
+        }
 
         var scopes = scopeClaim?.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList() ?? [];
 
@@ -84,7 +98,8 @@ public static class UserInfoEndpoint
             claims.PhoneNumberVerified = user.PhoneNumberVerified;
         }
 
-        return Results.Ok(claims);
+        logger.LogInformation("UserInfo request successful for user {UserId}", userId);
+        return Results.Json(claims, contentType: "application/json");
     }
 }
 

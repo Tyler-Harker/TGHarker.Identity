@@ -152,6 +152,9 @@ app.MapDefaultEndpoints();
 // Must be first to correctly set scheme/host from reverse proxy headers
 app.UseForwardedHeaders();
 
+// Diagnostic logging for OAuth responses (helps debug content-type issues)
+app.UseResponseLogging();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -159,7 +162,28 @@ if (app.Environment.IsDevelopment())
 }
 else
 {
-    app.UseExceptionHandler("/Error");
+    // Use JSON error responses for OAuth/API endpoints, HTML for Razor Pages
+    app.UseExceptionHandler(exceptionApp =>
+    {
+        exceptionApp.Run(async context =>
+        {
+            var path = context.Request.Path.Value ?? "/";
+
+            // Return JSON for OAuth/API endpoints
+            if (path.Contains("/connect/", StringComparison.OrdinalIgnoreCase) ||
+                path.Contains("/api/", StringComparison.OrdinalIgnoreCase))
+            {
+                context.Response.StatusCode = 500;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsync("{\"error\":\"server_error\",\"error_description\":\"An unexpected error occurred\"}");
+            }
+            else
+            {
+                // Redirect to Error page for browser requests
+                context.Response.Redirect("/Error");
+            }
+        });
+    });
     app.UseHsts();
 }
 

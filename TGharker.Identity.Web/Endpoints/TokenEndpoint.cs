@@ -37,7 +37,12 @@ public static class TokenEndpoint
     {
         try
         {
-            logger.LogInformation("Token request received. Path: {Path}", context.Request.Path);
+            logger.LogInformation("Token request received. Path: {Path}, Method: {Method}, ContentType: {ContentType}, Host: {Host}, Scheme: {Scheme}",
+                context.Request.Path,
+                context.Request.Method,
+                context.Request.ContentType,
+                context.Request.Host,
+                context.Request.Scheme);
 
             var tenant = await tenantResolver.ResolveAsync(context);
             if (tenant == null)
@@ -80,8 +85,11 @@ public static class TokenEndpoint
 
             if (result.IsSuccess)
             {
-                logger.LogInformation("Token request successful for client {ClientId}", client.ClientId);
-                return Results.Ok(result.Response);
+                logger.LogInformation("Token request successful for client {ClientId}. Returning JSON response with access_token length: {AccessTokenLength}, id_token present: {IdTokenPresent}",
+                    client.ClientId,
+                    result.Response?.AccessToken?.Length ?? 0,
+                    result.Response?.IdToken != null);
+                return Results.Json(result.Response, contentType: "application/json");
             }
 
             logger.LogWarning("Token request failed: {Error} - {Description}", result.ErrorCode, result.ErrorDescription);
@@ -89,7 +97,7 @@ public static class TokenEndpoint
             {
                 Error = result.ErrorCode!,
                 ErrorDescription = result.ErrorDescription
-            }, statusCode: 400);
+            }, statusCode: 400, contentType: "application/json");
         }
         catch (Exception ex)
         {

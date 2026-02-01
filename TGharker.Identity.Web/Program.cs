@@ -3,6 +3,7 @@ using Azure.Storage.Blobs;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
 using Orleans.Configuration;
 using TGharker.Identity.Web.Endpoints;
 using TGharker.Identity.Web.Middleware;
@@ -13,6 +14,16 @@ using TGHarker.Orleans.Search.PostgreSQL;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
+
+// Configure forwarded headers for reverse proxy (SSL termination)
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    // Clear the default known networks/proxies to allow forwarded headers from any source
+    // In production, you may want to restrict this to specific proxy IPs
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 // Check if running under Aspire (Aspire sets Orleans clustering via configuration)
 var isAspireManaged = !string.IsNullOrEmpty(builder.Configuration["Orleans:Clustering:ProviderType"]);
@@ -138,6 +149,9 @@ var app = builder.Build();
 app.MapDefaultEndpoints();
 
 // Configure the HTTP request pipeline
+// Must be first to correctly set scheme/host from reverse proxy headers
+app.UseForwardedHeaders();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

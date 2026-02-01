@@ -12,23 +12,31 @@ public static class UserInfoEndpoint
         // UserInfo endpoint must use JWT bearer authentication (not cookie)
         // This prevents redirect to login page when auth fails
         endpoints.MapGet("/connect/userinfo", HandleUserInfoRequest)
-            .RequireAuthorization(policy => policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme))
+            .RequireAuthorization(policy => policy
+                .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
+                .RequireAuthenticatedUser())
             .WithName("UserInfoGet")
             .WithTags("OIDC");
 
         endpoints.MapPost("/connect/userinfo", HandleUserInfoRequest)
-            .RequireAuthorization(policy => policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme))
+            .RequireAuthorization(policy => policy
+                .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
+                .RequireAuthenticatedUser())
             .WithName("UserInfoPost")
             .WithTags("OIDC");
 
         // Tenant-prefixed routes: /tenant/{tenantId}/connect/userinfo
         endpoints.MapGet("/tenant/{tenantId}/connect/userinfo", HandleUserInfoRequest)
-            .RequireAuthorization(policy => policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme))
+            .RequireAuthorization(policy => policy
+                .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
+                .RequireAuthenticatedUser())
             .WithName("UserInfoGetWithTenant")
             .WithTags("OIDC");
 
         endpoints.MapPost("/tenant/{tenantId}/connect/userinfo", HandleUserInfoRequest)
-            .RequireAuthorization(policy => policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme))
+            .RequireAuthorization(policy => policy
+                .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
+                .RequireAuthenticatedUser())
             .WithName("UserInfoPostWithTenant")
             .WithTags("OIDC");
 

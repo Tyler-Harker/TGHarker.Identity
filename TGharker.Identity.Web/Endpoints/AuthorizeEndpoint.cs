@@ -182,9 +182,6 @@ public static class AuthorizeEndpoint
         // If user has organizations but none selected, check for default or redirect to picker
         if (userOrgs.Count > 0 && string.IsNullOrEmpty(selectedOrgId))
         {
-            // Try to use default organization
-            selectedOrgId = membership.DefaultOrganizationId;
-
             // If no default, always redirect to org picker (even for single org)
             if (string.IsNullOrEmpty(selectedOrgId) && prompt != "none")
             {
@@ -194,13 +191,46 @@ public static class AuthorizeEndpoint
         }
 
         // Validate selected organization if provided
+        // The organization_id can be either:
+        // - The internal OrganizationId (GUID) from SelectOrganization page
+        // - The organization Identifier (slug) from JWT claims
         if (!string.IsNullOrEmpty(selectedOrgId))
         {
-            var isValidOrg = userOrgs.Any(o => o.OrganizationId == selectedOrgId);
-            if (!isValidOrg)
+            // First, check if it matches any OrganizationId directly (GUID)
+            var matchedOrg = userOrgs.FirstOrDefault(o => o.OrganizationId == selectedOrgId);
+
+            // If not found by GUID, try to match by organization Identifier
+            if (matchedOrg == null)
             {
+                foreach (var orgRef in userOrgs)
+                {
+                    var orgGrain = clusterClient.GetGrain<IOrganizationGrain>($"{tenant.Id}/org-{orgRef.OrganizationId}");
+                    var orgState = await orgGrain.GetStateAsync();
+                    if (orgState != null && orgState.IsActive &&
+                        string.Equals(orgState.Identifier, selectedOrgId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        matchedOrg = orgRef;
+                        break;
+                    }
+                }
+            }
+
+            if (matchedOrg == null)
+            {
+                var logger = context.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("AuthorizeEndpoint");
+                logger.LogWarning(
+                    "Organization validation failed: organization_id={SelectedOrgId} not found in user {UserId} memberships. " +
+                    "User has {OrgCount} orgs in tenant {TenantId}: [{OrgIds}]",
+                    selectedOrgId,
+                    userId,
+                    userOrgs.Count,
+                    tenant.Id,
+                    string.Join(", ", userOrgs.Select(o => o.OrganizationId)));
                 return responseBuilder.CreateErrorRedirect(redirectUri, state, responseMode, "access_denied", "User is not a member of the selected organization");
             }
+
+            // Normalize to OrganizationId (GUID) for downstream use
+            selectedOrgId = matchedOrg.OrganizationId;
         }
 
         // Check if consent is required

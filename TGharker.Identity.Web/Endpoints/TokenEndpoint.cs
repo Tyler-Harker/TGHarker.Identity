@@ -463,7 +463,7 @@ public static class TokenEndpoint
                 {
                     organizations.Add(new OrganizationClaimValue
                     {
-                        Id = orgState.Identifier,
+                        Id = orgRef.OrganizationId,
                         Name = orgState.Name
                     });
                 }
@@ -485,7 +485,7 @@ public static class TokenEndpoint
             {
                 var orgClaim = new OrganizationClaimValue
                 {
-                    Id = selectedOrgState.Identifier,
+                    Id = selectedOrganizationId,
                     Name = selectedOrgState.Name
                 };
                 claims["organization"] = JsonSerializer.Serialize(orgClaim, OrganizationClaimJsonContext.Default.OrganizationClaimValue);

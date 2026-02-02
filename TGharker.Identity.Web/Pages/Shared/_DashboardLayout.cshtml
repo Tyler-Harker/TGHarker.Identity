@@ -1,6 +1,9 @@
 @using System.Security.Claims
 @using TGharker.Identity.Web.Endpoints
+@using TGharker.Identity.Web.Services
+@using TGHarker.Identity.Abstractions.Models
 @inject IClusterClient ClusterClient
+@inject IPermissionService PermissionService
 @{
     var theme = ThemeEndpoint.GetCurrentTheme(Context);
     var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
@@ -24,6 +27,13 @@
             }
         }
     }
+
+    // Check permissions for nav items
+    var canViewUsers = await PermissionService.HasPermissionAsync(User, WellKnownPermissions.UsersView);
+    var canViewRoles = await PermissionService.HasPermissionAsync(User, WellKnownPermissions.RolesView);
+    var canViewClients = await PermissionService.HasPermissionAsync(User, WellKnownPermissions.ClientsView);
+    var canViewOrganizations = await PermissionService.HasPermissionAsync(User, WellKnownPermissions.OrganizationsView);
+    var canViewSettings = await PermissionService.HasAnyPermissionAsync(User, WellKnownPermissions.TenantViewSettings, WellKnownPermissions.TenantManage);
 }
 <!DOCTYPE html>
 <html lang="en" data-theme="@theme">
@@ -90,50 +100,68 @@
                 </div>
             </div>
 
-            <hr class="mx-3 my-2">
+            <!-- Scrollable navigation area -->
+            <div class="sidebar-nav-container">
+                <hr class="mx-3 my-2">
 
-            <!-- Navigation -->
-            <ul class="nav flex-column sidebar-nav">
-                <li class="nav-item">
-                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Dashboard" ? "active" : "")" asp-page="/Dashboard/Index">
-                        <i class="bi bi-house-door me-2"></i>
-                        Dashboard
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Users" ? "active" : "")" asp-page="/Dashboard/Users/Index">
-                        <i class="bi bi-people me-2"></i>
-                        Users
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Roles" ? "active" : "")" asp-page="/Dashboard/Roles/Index">
-                        <i class="bi bi-shield-check me-2"></i>
-                        Roles
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Clients" ? "active" : "")" asp-page="/Dashboard/Clients/Index">
-                        <i class="bi bi-app-indicator me-2"></i>
-                        Applications
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Organizations" ? "active" : "")" asp-page="/Dashboard/Organizations/Index">
-                        <i class="bi bi-building me-2"></i>
-                        Organizations
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Settings" ? "active" : "")" asp-page="/Dashboard/Settings/Index">
-                        <i class="bi bi-gear me-2"></i>
-                        Settings
-                    </a>
-                </li>
-            </ul>
+                <!-- Navigation -->
+                <ul class="nav flex-column sidebar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Dashboard" ? "active" : "")" asp-page="/Dashboard/Index">
+                            <i class="bi bi-house-door me-2"></i>
+                            Dashboard
+                        </a>
+                    </li>
+                    @if (canViewUsers)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Users" ? "active" : "")" asp-page="/Dashboard/Users/Index">
+                                <i class="bi bi-people me-2"></i>
+                                Users
+                            </a>
+                        </li>
+                    }
+                    @if (canViewRoles)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Roles" ? "active" : "")" asp-page="/Dashboard/Roles/Index">
+                                <i class="bi bi-shield-check me-2"></i>
+                                Roles
+                            </a>
+                        </li>
+                    }
+                    @if (canViewClients)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Clients" ? "active" : "")" asp-page="/Dashboard/Clients/Index">
+                                <i class="bi bi-app-indicator me-2"></i>
+                                Applications
+                            </a>
+                        </li>
+                    }
+                    @if (canViewOrganizations)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Organizations" ? "active" : "")" asp-page="/Dashboard/Organizations/Index">
+                                <i class="bi bi-building me-2"></i>
+                                Organizations
+                            </a>
+                        </li>
+                    }
+                    @if (canViewSettings)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Settings" ? "active" : "")" asp-page="/Dashboard/Settings/Index">
+                                <i class="bi bi-gear me-2"></i>
+                                Settings
+                            </a>
+                        </li>
+                    }
+                </ul>
+            </div>
 
             <!-- Theme toggle and User section at bottom -->
-            <div class="sidebar-footer mt-auto">
+            <div class="sidebar-footer">
                 <hr class="mx-3 my-2">
                 <div class="theme-toggle" onclick="toggleTheme()">
                     <span><i class="bi bi-moon-stars me-2"></i>Dark Mode</span>

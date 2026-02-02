@@ -81,6 +81,12 @@ public class IdentityTestServer : IAsyncDisposable
                     services.AddSingleton<ITenantSigningKeyResolver, TenantSigningKeyResolver>();
                     services.AddMemoryCache();
 
+                    // OAuth utilities
+                    services.AddSingleton<IOAuthTokenGenerator, OAuthTokenGenerator>();
+                    services.AddSingleton<IOAuthUrlBuilder, OAuthUrlBuilder>();
+                    services.AddSingleton<IOAuthParameterParser, OAuthParameterParser>();
+                    services.AddSingleton<IOAuthResponseBuilder, OAuthResponseBuilder>();
+
                     // Data protection for testing
                     services.AddDataProtection()
                         .SetApplicationName("TGHarker.Identity");

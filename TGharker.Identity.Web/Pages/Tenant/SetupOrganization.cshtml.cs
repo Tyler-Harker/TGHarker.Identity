@@ -72,6 +72,14 @@ public class SetupOrganizationModel : TenantAuthPageModel
     [FromQuery(Name = "response_mode")]
     public string? ResponseMode { get; set; }
 
+    /// <summary>
+    /// When true, allows creating a new organization even if the user already has one.
+    /// Used when user explicitly chooses "Create New Organization" from the org picker.
+    /// </summary>
+    [BindProperty(SupportsGet = true)]
+    [FromQuery(Name = "allow_create")]
+    public bool AllowCreate { get; set; }
+
     public class InputModel
     {
         [Display(Name = "Organization Name")]
@@ -104,19 +112,23 @@ public class SetupOrganizationModel : TenantAuthPageModel
         ParseOAuthParametersFromReturnUrl();
 
         // Check if user already has an organization
-        var userGrain = ClusterClient.GetGrain<IUserGrain>($"user-{userId}");
-        var user = await userGrain.GetStateAsync();
-
-        if (user != null)
+        // Skip this check if AllowCreate is true (user explicitly wants to create a new org)
+        if (!AllowCreate)
         {
-            var userOrgs = user.OrganizationMemberships
-                .Where(m => m.TenantId == Tenant.Id)
-                .ToList();
+            var userGrain = ClusterClient.GetGrain<IUserGrain>($"user-{userId}");
+            var user = await userGrain.GetStateAsync();
 
-            if (userOrgs.Count > 0)
+            if (user != null)
             {
-                // User already has an organization, redirect to authorize
-                return RedirectToAuthorize(userOrgs[0].OrganizationId);
+                var userOrgs = user.OrganizationMemberships
+                    .Where(m => m.TenantId == Tenant.Id)
+                    .ToList();
+
+                if (userOrgs.Count > 0)
+                {
+                    // User already has an organization, redirect to authorize
+                    return RedirectToAuthorize(userOrgs[0].OrganizationId);
+                }
             }
         }
 

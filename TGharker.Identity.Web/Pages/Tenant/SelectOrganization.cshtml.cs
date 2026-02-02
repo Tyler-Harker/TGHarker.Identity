@@ -62,6 +62,11 @@ public class SelectOrganizationModel : TenantAuthPageModel
     public List<OrganizationInfo> Organizations { get; set; } = [];
     public string? ErrorMessage { get; set; }
 
+    /// <summary>
+    /// Special value used to indicate the user wants to create a new organization.
+    /// </summary>
+    public const string CreateNewOrganizationValue = "__create_new__";
+
     public class OrganizationInfo
     {
         public string Id { get; set; } = string.Empty;
@@ -97,12 +102,6 @@ public class SelectOrganizationModel : TenantAuthPageModel
             return RedirectToAuthorize(null);
         }
 
-        if (Organizations.Count == 1)
-        {
-            // Only one org, auto-select it
-            return RedirectToAuthorize(Organizations[0].Id);
-        }
-
         // Pre-select the default organization if set
         var membershipGrain = ClusterClient.GetGrain<ITenantMembershipGrain>($"{Tenant!.Id}/member-{userId}");
         var defaultOrgId = await membershipGrain.GetDefaultOrganizationAsync();
@@ -134,6 +133,12 @@ public class SelectOrganizationModel : TenantAuthPageModel
             await LoadUserOrganizationsAsync(userId);
             ErrorMessage = "Please select an organization.";
             return Page();
+        }
+
+        // Check if user wants to create a new organization
+        if (SelectedOrganizationId == CreateNewOrganizationValue)
+        {
+            return RedirectToSetupOrganization();
         }
 
         // Validate user is member of selected organization
@@ -209,6 +214,29 @@ public class SelectOrganizationModel : TenantAuthPageModel
             BuildOAuthQueryString(oauthParams);
 
         return Redirect(authorizeUrl);
+    }
+
+    private IActionResult RedirectToSetupOrganization()
+    {
+        var oauthParams = new OAuthParameters
+        {
+            ClientId = ClientId,
+            Scope = Scope,
+            RedirectUri = RedirectUri,
+            State = State,
+            Nonce = Nonce,
+            CodeChallenge = CodeChallenge,
+            CodeChallengeMethod = CodeChallengeMethod,
+            ResponseMode = ResponseMode
+        };
+
+        // Build URL with OAuth params and add allow_create=true to bypass the "already has org" check
+        var setupUrl = _urlBuilder.BuildUrl($"/tenant/{Tenant!.Identifier}/setup-organization", oauthParams);
+        setupUrl += "&allow_create=true";
+
+        Logger.LogInformation("User requested to create new organization, redirecting to: {SetupUrl}", setupUrl);
+
+        return Redirect(setupUrl);
     }
 
     private static string BuildOAuthQueryString(OAuthParameters parameters)

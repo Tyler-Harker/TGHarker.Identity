@@ -9,7 +9,7 @@
 /* Sidebar */
 .sidebar {
     width: 280px;
-    min-height: 100vh;
+    height: 100vh;
     background-color: var(--sidebar-bg);
     border-right: 1px solid var(--border-color);
     display: flex;
@@ -20,9 +20,36 @@
     bottom: 0;
     z-index: 1000;
     transition: transform 0.3s ease;
+    overflow: hidden;
+}
+
+/* Scrollable navigation area */
+.sidebar-nav-container {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0; /* Required for flex overflow to work */
+}
+
+/* Custom scrollbar for sidebar */
+.sidebar-nav-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar-nav-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar-nav-container::-webkit-scrollbar-thumb {
+    background-color: var(--border-color);
+    border-radius: 3px;
+}
+
+.sidebar-nav-container::-webkit-scrollbar-thumb:hover {
+    background-color: var(--text-muted);
 }
 
 .sidebar-header {
+    flex-shrink: 0; /* Prevent header from shrinking */
     padding: 1rem 1rem;
     border-bottom: 1px solid var(--border-color);
     background-color: var(--sidebar-header-bg);
@@ -36,6 +63,7 @@
 
 /* Tenant Switcher */
 .tenant-switcher {
+    flex-shrink: 0; /* Prevent tenant switcher from shrinking */
     background-color: var(--sidebar-header-bg);
 }
 
@@ -109,7 +137,7 @@
 
 /* Sidebar Footer */
 .sidebar-footer {
-    margin-top: auto;
+    flex-shrink: 0; /* Prevent footer from shrinking */
     background-color: var(--sidebar-header-bg);
     border-top: 1px solid var(--border-color);
 }

@@ -9,7 +9,7 @@ using TGharker.Identity.Web.Services;
 
 namespace TGharker.Identity.Web.Pages.Dashboard.Users;
 
-[Authorize]
+[Authorize(Policy = WellKnownPermissions.UsersInvite)]
 public class InviteModel : PageModel
 {
     private readonly IClusterClient _clusterClient;

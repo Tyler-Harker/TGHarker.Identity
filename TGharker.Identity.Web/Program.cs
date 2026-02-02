@@ -2,9 +2,11 @@ using Azure.Data.Tables;
 using Azure.Storage.Blobs;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Orleans.Configuration;
+using TGharker.Identity.Web.Authorization;
 using TGharker.Identity.Web.Endpoints;
 using TGharker.Identity.Web.Middleware;
 using TGharker.Identity.Web.Services;
@@ -75,6 +77,10 @@ builder.Services.AddRazorPages();
 // Register identity services
 builder.Services.AddSingleton<IPasswordHasher, PasswordHasher>();
 builder.Services.AddSingleton<IPkceValidator, PkceValidator>();
+builder.Services.AddSingleton<IOAuthTokenGenerator, OAuthTokenGenerator>();
+builder.Services.AddSingleton<IOAuthUrlBuilder, OAuthUrlBuilder>();
+builder.Services.AddSingleton<IOAuthParameterParser, OAuthParameterParser>();
+builder.Services.AddSingleton<IOAuthResponseBuilder, OAuthResponseBuilder>();
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 builder.Services.AddScoped<IClientAuthenticationService, ClientAuthenticationService>();
 builder.Services.AddScoped<ITenantResolver, TenantResolver>();
@@ -86,6 +92,11 @@ builder.Services.AddSingleton<IOAuthCorsService, OAuthCorsService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddSingleton<ITenantSigningKeyResolver, TenantSigningKeyResolver>();
 builder.Services.AddMemoryCache();
+
+// Permission service and authorization handlers
+builder.Services.AddScoped<IPermissionService, PermissionService>();
+builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, AnyPermissionAuthorizationHandler>();
 
 // Configure JWT bearer options with dynamic tenant-based signing key resolution
 builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
@@ -244,6 +255,9 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("SuperAdmin", policy =>
         policy.AddAuthenticationSchemes("SuperAdmin")
               .RequireClaim("is_superadmin", "true"));
+
+    // Add permission-based authorization policies
+    options.AddPermissionPolicies();
 });
 
 // Swagger for API documentation

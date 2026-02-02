@@ -1,11 +1,10 @@
-using System.Security.Cryptography;
 using System.Web;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.IdentityModel.Tokens;
 using TGHarker.Identity.Abstractions.Grains;
 using TGHarker.Identity.Abstractions.Models;
+using TGharker.Identity.Web.Services;
 
 namespace TGharker.Identity.Web.Pages.Consent;
 
@@ -13,11 +12,16 @@ namespace TGharker.Identity.Web.Pages.Consent;
 public class IndexModel : PageModel
 {
     private readonly IClusterClient _clusterClient;
+    private readonly IOAuthTokenGenerator _oauthTokenGenerator;
     private readonly ILogger<IndexModel> _logger;
 
-    public IndexModel(IClusterClient clusterClient, ILogger<IndexModel> logger)
+    public IndexModel(
+        IClusterClient clusterClient,
+        IOAuthTokenGenerator oauthTokenGenerator,
+        ILogger<IndexModel> logger)
     {
         _clusterClient = clusterClient;
+        _oauthTokenGenerator = oauthTokenGenerator;
         _logger = logger;
     }
 
@@ -215,8 +219,8 @@ public class IndexModel : PageModel
         _logger.LogInformation("Final scopes for consent: {Scopes}", string.Join(" ", finalScopes));
 
         // Generate authorization code
-        var code = GenerateSecureCode();
-        var codeHash = HashCode(code);
+        var code = _oauthTokenGenerator.GenerateToken();
+        var codeHash = _oauthTokenGenerator.HashToken(code);
         var grainKey = $"{tenantId}/code-{codeHash}";
 
         _logger.LogInformation("Creating authorization code grain: {GrainKey}", grainKey);
@@ -325,17 +329,5 @@ public class IndexModel : PageModel
             """;
 
         return Content(html, "text/html");
-    }
-
-    private static string GenerateSecureCode()
-    {
-        var bytes = RandomNumberGenerator.GetBytes(32);
-        return Base64UrlEncoder.Encode(bytes);
-    }
-
-    private static string HashCode(string code)
-    {
-        var hash = SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(code));
-        return Base64UrlEncoder.Encode(hash);
     }
 }

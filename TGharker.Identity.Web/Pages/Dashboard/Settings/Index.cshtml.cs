@@ -7,7 +7,7 @@ using TGHarker.Identity.Abstractions.Models;
 
 namespace TGharker.Identity.Web.Pages.Dashboard.Settings;
 
-[Authorize]
+[Authorize(Policy = WellKnownPermissions.TenantManage)]
 public class IndexModel : PageModel
 {
     private readonly IClusterClient _clusterClient;

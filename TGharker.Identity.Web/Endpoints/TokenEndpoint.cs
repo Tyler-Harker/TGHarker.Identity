@@ -1,7 +1,5 @@
-using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Microsoft.IdentityModel.Tokens;
 using TGHarker.Identity.Abstractions.Grains;
 using TGHarker.Identity.Abstractions.Models;
 using TGharker.Identity.Web.Services;
@@ -33,6 +31,7 @@ public static class TokenEndpoint
         ITenantResolver tenantResolver,
         IClientAuthenticationService clientAuthService,
         IJwtTokenGenerator tokenGenerator,
+        IOAuthTokenGenerator oauthTokenGenerator,
         IClusterClient clusterClient,
         ILogger<Program> logger)
     {
@@ -76,11 +75,11 @@ public static class TokenEndpoint
             var result = grantType switch
             {
                 GrantTypes.AuthorizationCode => await HandleAuthorizationCodeAsync(
-                    context, tenant, client, form, tokenGenerator, clusterClient, tenantResolver, logger),
+                    context, tenant, client, form, tokenGenerator, oauthTokenGenerator, clusterClient, tenantResolver, logger),
                 GrantTypes.ClientCredentials => await HandleClientCredentialsAsync(
                     context, tenant, client, form, tokenGenerator, tenantResolver),
                 GrantTypes.RefreshToken => await HandleRefreshTokenAsync(
-                    context, tenant, client, form, tokenGenerator, clusterClient, tenantResolver),
+                    context, tenant, client, form, tokenGenerator, oauthTokenGenerator, clusterClient, tenantResolver),
                 _ => TokenResult.Error("unsupported_grant_type", "The grant type is not supported")
             };
 
@@ -117,6 +116,7 @@ public static class TokenEndpoint
         ClientState client,
         IFormCollection form,
         IJwtTokenGenerator tokenGenerator,
+        IOAuthTokenGenerator oauthTokenGenerator,
         IClusterClient clusterClient,
         ITenantResolver tenantResolver,
         ILogger logger)
@@ -143,7 +143,7 @@ public static class TokenEndpoint
         }
 
         // Hash code to get grain key
-        var codeHash = HashCode(code);
+        var codeHash = oauthTokenGenerator.HashToken(code);
         var grainKey = $"{tenant.Id}/code-{codeHash}";
         logger.LogInformation("Looking up authorization code grain: {GrainKey}", grainKey);
 
@@ -214,7 +214,7 @@ public static class TokenEndpoint
         {
             // Initial token, not rotation - ignore the hash
             (refreshToken, _) = await CreateRefreshTokenAsync(
-                tenant, client, authCode.UserId, authCode.Scopes, context, clusterClient);
+                tenant, client, authCode.UserId, authCode.Scopes, context, clusterClient, oauthTokenGenerator);
         }
 
         return TokenResult.Success(new TokenResponse
@@ -278,6 +278,7 @@ public static class TokenEndpoint
         ClientState client,
         IFormCollection form,
         IJwtTokenGenerator tokenGenerator,
+        IOAuthTokenGenerator oauthTokenGenerator,
         IClusterClient clusterClient,
         ITenantResolver tenantResolver)
     {
@@ -291,7 +292,7 @@ public static class TokenEndpoint
             return TokenResult.Error("unauthorized_client", "Client is not authorized for this grant type");
 
         // Hash token to get grain key
-        var tokenHash = HashCode(refreshTokenValue);
+        var tokenHash = oauthTokenGenerator.HashToken(refreshTokenValue);
         var refreshTokenGrain = clusterClient.GetGrain<IRefreshTokenGrain>($"{tenant.Id}/rt-{tokenHash}");
 
         var tokenState = await refreshTokenGrain.ValidateAndRevokeAsync();
@@ -355,7 +356,7 @@ public static class TokenEndpoint
 
         // Create new refresh token (rotation)
         var (newRefreshToken, newTokenHash) = await CreateRefreshTokenAsync(
-            tenant, client, tokenState.UserId, scopes, context, clusterClient);
+            tenant, client, tokenState.UserId, scopes, context, clusterClient, oauthTokenGenerator);
 
         // Link old token to new token for token reuse detection
         await refreshTokenGrain.SetReplacementTokenAsync(newTokenHash);
@@ -377,10 +378,11 @@ public static class TokenEndpoint
         string? userId,
         IReadOnlyList<string> scopes,
         HttpContext context,
-        IClusterClient clusterClient)
+        IClusterClient clusterClient,
+        IOAuthTokenGenerator oauthTokenGenerator)
     {
-        var refreshTokenValue = GenerateSecureToken();
-        var tokenHash = HashCode(refreshTokenValue);
+        var refreshTokenValue = oauthTokenGenerator.GenerateToken();
+        var tokenHash = oauthTokenGenerator.HashToken(refreshTokenValue);
 
         var refreshTokenGrain = clusterClient.GetGrain<IRefreshTokenGrain>($"{tenant.Id}/rt-{tokenHash}");
 
@@ -518,17 +520,6 @@ public static class TokenEndpoint
         return Task.FromResult(claims);
     }
 
-    private static string GenerateSecureToken()
-    {
-        var bytes = RandomNumberGenerator.GetBytes(32);
-        return Base64UrlEncoder.Encode(bytes);
-    }
-
-    private static string HashCode(string code)
-    {
-        var hash = SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(code));
-        return Base64UrlEncoder.Encode(hash);
-    }
 }
 
 public sealed class TokenResult

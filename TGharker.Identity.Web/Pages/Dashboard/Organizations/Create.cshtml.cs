@@ -10,7 +10,7 @@ using TGharker.Identity.Web.Services;
 
 namespace TGharker.Identity.Web.Pages.Dashboard.Organizations;
 
-[Authorize]
+[Authorize(Policy = WellKnownPermissions.OrganizationsCreate)]
 public class CreateModel : PageModel
 {
     private readonly IClusterClient _clusterClient;

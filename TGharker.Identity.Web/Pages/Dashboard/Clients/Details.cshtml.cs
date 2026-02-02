@@ -6,7 +6,7 @@ using TGHarker.Identity.Abstractions.Models;
 
 namespace TGharker.Identity.Web.Pages.Dashboard.Clients;
 
-[Authorize]
+[Authorize(Policy = WellKnownPermissions.ClientsView)]
 public class DetailsModel : PageModel
 {
     private readonly IClusterClient _clusterClient;

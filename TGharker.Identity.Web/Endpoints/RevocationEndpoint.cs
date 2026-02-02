@@ -1,5 +1,3 @@
-using System.Security.Cryptography;
-using Microsoft.IdentityModel.Tokens;
 using TGHarker.Identity.Abstractions.Grains;
 using TGharker.Identity.Web.Services;
 
@@ -29,6 +27,7 @@ public static class RevocationEndpoint
         HttpContext context,
         ITenantResolver tenantResolver,
         IClientAuthenticationService clientAuthService,
+        IOAuthTokenGenerator oauthTokenGenerator,
         IClusterClient clusterClient)
     {
         var tenant = await tenantResolver.ResolveAsync(context);
@@ -55,7 +54,7 @@ public static class RevocationEndpoint
         // Try to revoke as refresh token first (or based on hint)
         if (tokenTypeHint == null || tokenTypeHint == "refresh_token")
         {
-            var tokenHash = HashToken(token);
+            var tokenHash = oauthTokenGenerator.HashToken(token);
             var refreshTokenGrain = clusterClient.GetGrain<IRefreshTokenGrain>($"{tenant.Id}/rt-{tokenHash}");
 
             var state = await refreshTokenGrain.GetStateAsync();
@@ -71,11 +70,5 @@ public static class RevocationEndpoint
 
         // Per RFC 7009, always return 200 OK even if token not found
         return Results.Ok();
-    }
-
-    private static string HashToken(string token)
-    {
-        var hash = SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(token));
-        return Base64UrlEncoder.Encode(hash);
     }
 }

@@ -7,7 +7,7 @@ using TGHarker.Identity.Abstractions.Models;
 
 namespace TGharker.Identity.Web.Pages.Dashboard.Organizations;
 
-[Authorize]
+[Authorize(Policy = WellKnownPermissions.OrganizationsView)]
 public class DetailsModel : PageModel
 {
     private readonly IClusterClient _clusterClient;

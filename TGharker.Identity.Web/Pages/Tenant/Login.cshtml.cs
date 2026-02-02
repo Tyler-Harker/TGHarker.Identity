@@ -14,17 +14,23 @@ public class LoginModel : TenantAuthPageModel
 {
     private readonly ISessionService _sessionService;
     private readonly IUserFlowService _userFlowService;
+    private readonly IOAuthUrlBuilder _urlBuilder;
+    private readonly IOAuthParameterParser _parameterParser;
 
     public LoginModel(
         IClusterClient clusterClient,
         IGrainSearchService searchService,
         ISessionService sessionService,
         IUserFlowService userFlowService,
+        IOAuthUrlBuilder urlBuilder,
+        IOAuthParameterParser parameterParser,
         ILogger<LoginModel> logger)
         : base(clusterClient, searchService, logger)
     {
         _sessionService = sessionService;
         _userFlowService = userFlowService;
+        _urlBuilder = urlBuilder;
+        _parameterParser = parameterParser;
     }
 
     [BindProperty]
@@ -194,42 +200,29 @@ public class LoginModel : TenantAuthPageModel
         // If ReturnUrl is not an authorize URL, just pass it through
         if (string.IsNullOrEmpty(ReturnUrl) || !ReturnUrl.Contains("/connect/authorize"))
         {
-            return $"{baseUrl}?returnUrl={HttpUtility.UrlEncode(ReturnUrl)}";
+            return _urlBuilder.BuildUrlWithReturnUrl(baseUrl, ReturnUrl ?? "/");
         }
 
-        // Parse OAuth parameters from ReturnUrl to avoid double-encoding issues
+        // Parse OAuth parameters from ReturnUrl
         try
         {
-            var decodedUrl = HttpUtility.UrlDecode(ReturnUrl);
-            var queryIndex = decodedUrl.IndexOf('?');
-            if (queryIndex < 0)
+            var oauthParams = _parameterParser.ParseFromReturnUrl(ReturnUrl);
+            if (oauthParams == null)
             {
-                return $"{baseUrl}?returnUrl={HttpUtility.UrlEncode(ReturnUrl)}";
+                return _urlBuilder.BuildUrlWithReturnUrl(baseUrl, ReturnUrl);
             }
 
-            var queryString = decodedUrl[(queryIndex + 1)..];
-            var queryParams = HttpUtility.ParseQueryString(queryString);
+            // Build URL with individual OAuth params using proper encoding
+            var setupUrl = _urlBuilder.BuildUrl(baseUrl, oauthParams);
 
-            // Use Uri.EscapeDataString instead of HttpUtility.UrlEncode to properly encode
-            // special characters like '+' as '%2B' (UrlEncode treats + as space)
-            var setupUrl = $"{baseUrl}?" +
-                $"client_id={Uri.EscapeDataString(queryParams["client_id"] ?? "")}" +
-                $"&scope={Uri.EscapeDataString(queryParams["scope"] ?? "")}" +
-                $"&redirect_uri={Uri.EscapeDataString(queryParams["redirect_uri"] ?? "")}" +
-                $"&state={Uri.EscapeDataString(queryParams["state"] ?? "")}" +
-                $"&nonce={Uri.EscapeDataString(queryParams["nonce"] ?? "")}" +
-                $"&code_challenge={Uri.EscapeDataString(queryParams["code_challenge"] ?? "")}" +
-                $"&code_challenge_method={Uri.EscapeDataString(queryParams["code_challenge_method"] ?? "")}" +
-                $"&response_mode={Uri.EscapeDataString(queryParams["response_mode"] ?? "")}";
-
-            Logger.LogDebug("Built setup organization URL with individual OAuth params, state={State}", queryParams["state"]);
+            Logger.LogDebug("Built setup organization URL with individual OAuth params, state={State}", oauthParams.State);
 
             return setupUrl;
         }
         catch (Exception ex)
         {
             Logger.LogWarning(ex, "Failed to parse OAuth params from ReturnUrl, using fallback");
-            return $"{baseUrl}?returnUrl={HttpUtility.UrlEncode(ReturnUrl)}";
+            return _urlBuilder.BuildUrlWithReturnUrl(baseUrl, ReturnUrl);
         }
     }
 }

@@ -440,8 +440,10 @@ public class OidcFlowTests
         if (setupPost.PostData != null)
         {
             Console.WriteLine($"Setup POST data: {setupPost.PostData}");
-            Assert.Contains("State=", setupPost.PostData);
-            Assert.Contains("ClientId=", setupPost.PostData);
+            // The form uses multipart/form-data encoding to preserve special chars like '+'
+            // In multipart format, field names appear after 'name="' (e.g., 'name="State"')
+            Assert.Contains("name=\"State\"", setupPost.PostData);
+            Assert.Contains("name=\"ClientId\"", setupPost.PostData);
         }
 
         // Final assertions

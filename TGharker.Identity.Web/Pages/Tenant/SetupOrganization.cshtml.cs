@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using System.Web;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TGHarker.Identity.Abstractions.Grains;
@@ -13,17 +12,23 @@ public class SetupOrganizationModel : TenantAuthPageModel
 {
     private readonly IUserFlowService _userFlowService;
     private readonly IOrganizationCreationService _organizationCreationService;
+    private readonly IOAuthUrlBuilder _urlBuilder;
+    private readonly IOAuthParameterParser _parameterParser;
 
     public SetupOrganizationModel(
         IClusterClient clusterClient,
         IGrainSearchService searchService,
         IUserFlowService userFlowService,
         IOrganizationCreationService organizationCreationService,
+        IOAuthUrlBuilder urlBuilder,
+        IOAuthParameterParser parameterParser,
         ILogger<SetupOrganizationModel> logger)
         : base(clusterClient, searchService, logger)
     {
         _userFlowService = userFlowService;
         _organizationCreationService = organizationCreationService;
+        _urlBuilder = urlBuilder;
+        _parameterParser = parameterParser;
     }
 
     [BindProperty]
@@ -201,25 +206,18 @@ public class SetupOrganizationModel : TenantAuthPageModel
 
         try
         {
-            // ReturnUrl might be URL-encoded, so decode it first
-            var decodedUrl = HttpUtility.UrlDecode(ReturnUrl);
-
-            // Parse query string from the return URL
-            var queryIndex = decodedUrl.IndexOf('?');
-            if (queryIndex < 0)
+            var oauthParams = _parameterParser.ParseFromReturnUrl(ReturnUrl);
+            if (oauthParams == null)
                 return;
 
-            var queryString = decodedUrl[(queryIndex + 1)..];
-            var queryParams = HttpUtility.ParseQueryString(queryString);
-
-            ClientId = queryParams["client_id"];
-            Scope = queryParams["scope"];
-            RedirectUri = queryParams["redirect_uri"];
-            State = queryParams["state"];
-            Nonce = queryParams["nonce"];
-            CodeChallenge = queryParams["code_challenge"];
-            CodeChallengeMethod = queryParams["code_challenge_method"];
-            ResponseMode = queryParams["response_mode"];
+            ClientId = oauthParams.ClientId;
+            Scope = oauthParams.Scope;
+            RedirectUri = oauthParams.RedirectUri;
+            State = oauthParams.State;
+            Nonce = oauthParams.Nonce;
+            CodeChallenge = oauthParams.CodeChallenge;
+            CodeChallengeMethod = oauthParams.CodeChallengeMethod;
+            ResponseMode = oauthParams.ResponseMode;
 
             Logger.LogDebug(
                 "Parsed OAuth params from ReturnUrl - ClientId: {ClientId}, State: {State}",
@@ -240,26 +238,49 @@ public class SetupOrganizationModel : TenantAuthPageModel
             return Redirect(GetEffectiveReturnUrl());
         }
 
-        // Use Uri.EscapeDataString to properly encode special characters like '+'
-        var authorizeUrl = $"/tenant/{Tenant!.Identifier}/connect/authorize?" +
-            $"response_type=code" +
-            $"&client_id={Uri.EscapeDataString(ClientId ?? "")}" +
-            $"&redirect_uri={Uri.EscapeDataString(RedirectUri ?? "")}" +
-            $"&scope={Uri.EscapeDataString(Scope ?? "")}" +
-            $"&state={Uri.EscapeDataString(State ?? "")}" +
-            $"&nonce={Uri.EscapeDataString(Nonce ?? "")}" +
-            $"&code_challenge={Uri.EscapeDataString(CodeChallenge ?? "")}" +
-            $"&code_challenge_method={Uri.EscapeDataString(CodeChallengeMethod ?? "")}" +
-            $"&response_mode={Uri.EscapeDataString(ResponseMode ?? "")}";
-
-        if (!string.IsNullOrEmpty(organizationId))
+        // Build authorize URL with proper encoding
+        var oauthParams = new OAuthParameters
         {
-            authorizeUrl += $"&organization_id={Uri.EscapeDataString(organizationId)}";
-        }
+            ClientId = ClientId,
+            Scope = Scope,
+            RedirectUri = RedirectUri,
+            State = State,
+            Nonce = Nonce,
+            CodeChallenge = CodeChallenge,
+            CodeChallengeMethod = CodeChallengeMethod,
+            ResponseMode = ResponseMode,
+            OrganizationId = organizationId
+        };
+
+        // Add response_type=code since it's required for authorize endpoint
+        var authorizeUrl = $"/tenant/{Tenant!.Identifier}/connect/authorize?response_type=code&" +
+            BuildOAuthQueryString(oauthParams);
 
         Logger.LogInformation("Redirecting to authorize: {AuthorizeUrl}", authorizeUrl);
 
         return Redirect(authorizeUrl);
+    }
+
+    private static string BuildOAuthQueryString(OAuthParameters parameters)
+    {
+        var parts = new List<string>();
+
+        AppendParam(parts, "client_id", parameters.ClientId);
+        AppendParam(parts, "redirect_uri", parameters.RedirectUri);
+        AppendParam(parts, "scope", parameters.Scope);
+        AppendParam(parts, "state", parameters.State);
+        AppendParam(parts, "nonce", parameters.Nonce);
+        AppendParam(parts, "code_challenge", parameters.CodeChallenge);
+        AppendParam(parts, "code_challenge_method", parameters.CodeChallengeMethod);
+        AppendParam(parts, "response_mode", parameters.ResponseMode);
+        AppendParam(parts, "organization_id", parameters.OrganizationId);
+
+        return string.Join("&", parts);
+    }
+
+    private static void AppendParam(List<string> parts, string name, string? value)
+    {
+        parts.Add($"{name}={Uri.EscapeDataString(value ?? "")}");
     }
 
     private async Task LoadUserFlowAsync()

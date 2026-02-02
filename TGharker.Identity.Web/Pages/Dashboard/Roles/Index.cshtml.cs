@@ -9,7 +9,7 @@ using TGHarker.Orleans.Search.Generated;
 
 namespace TGharker.Identity.Web.Pages.Dashboard.Roles;
 
-[Authorize]
+[Authorize(Policy = WellKnownPermissions.RolesView)]
 public class IndexModel : PageModel
 {
     private readonly IClusterClient _clusterClient;

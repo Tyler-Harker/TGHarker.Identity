@@ -1,7 +1,4 @@
-using System.Security.Cryptography;
-using System.Text;
 using System.Web;
-using Microsoft.IdentityModel.Tokens;
 using TGHarker.Identity.Abstractions.Grains;
 using TGHarker.Identity.Abstractions.Models;
 using TGharker.Identity.Web.Services;
@@ -29,6 +26,9 @@ public static class AuthorizeEndpoint
     private static async Task<IResult> HandleAuthorizeRequest(
         HttpContext context,
         ITenantResolver tenantResolver,
+        IOAuthTokenGenerator oauthTokenGenerator,
+        IOAuthUrlBuilder urlBuilder,
+        IOAuthResponseBuilder responseBuilder,
         IClusterClient clusterClient)
     {
         var tenant = await tenantResolver.ResolveAsync(context);
@@ -51,46 +51,46 @@ public static class AuthorizeEndpoint
 
         // Validate required parameters
         if (string.IsNullOrEmpty(responseType))
-            return CreateErrorResponse(redirectUri, state, responseMode, "invalid_request", "response_type is required");
+            return responseBuilder.CreateErrorRedirect(redirectUri, state, responseMode, "invalid_request", "response_type is required");
 
         if (responseType != "code")
-            return CreateErrorResponse(redirectUri, state, responseMode, "unsupported_response_type", "Only code response type is supported");
+            return responseBuilder.CreateErrorRedirect(redirectUri, state, responseMode, "unsupported_response_type", "Only code response type is supported");
 
         if (string.IsNullOrEmpty(clientId))
-            return CreateErrorResponse(redirectUri, state, responseMode, "invalid_request", "client_id is required");
+            return responseBuilder.CreateErrorRedirect(redirectUri, state, responseMode, "invalid_request", "client_id is required");
 
         if (string.IsNullOrEmpty(redirectUri))
-            return CreateErrorResponse(null, state, responseMode, "invalid_request", "redirect_uri is required");
+            return responseBuilder.CreateErrorRedirect(null, state, responseMode, "invalid_request", "redirect_uri is required");
 
         if (string.IsNullOrEmpty(scope))
-            return CreateErrorResponse(redirectUri, state, responseMode, "invalid_request", "scope is required");
+            return responseBuilder.CreateErrorRedirect(redirectUri, state, responseMode, "invalid_request", "scope is required");
 
         // Get client
         var clientGrain = clusterClient.GetGrain<IClientGrain>($"{tenant.Id}/{clientId}");
         var client = await clientGrain.GetStateAsync();
 
         if (client == null)
-            return CreateErrorResponse(redirectUri, state, responseMode, "invalid_client", "Client not found");
+            return responseBuilder.CreateErrorRedirect(redirectUri, state, responseMode, "invalid_client", "Client not found");
 
         if (!client.IsActive)
-            return CreateErrorResponse(redirectUri, state, responseMode, "invalid_client", "Client is not active");
+            return responseBuilder.CreateErrorRedirect(redirectUri, state, responseMode, "invalid_client", "Client is not active");
 
         // Validate redirect URI format and security
         var uriValidation = RedirectUriValidator.ValidateForAuthorization(redirectUri, client.RedirectUris);
         if (!uriValidation.IsValid)
-            return CreateErrorResponse(null, state, responseMode, "invalid_request", uriValidation.Error ?? "Invalid redirect_uri");
+            return responseBuilder.CreateErrorRedirect(null, state, responseMode, "invalid_request", uriValidation.Error ?? "Invalid redirect_uri");
 
         // Validate grant type
         if (!await clientGrain.ValidateGrantTypeAsync(GrantTypes.AuthorizationCode))
-            return CreateErrorResponse(redirectUri, state, responseMode, "unauthorized_client", "Client not authorized for authorization_code grant");
+            return responseBuilder.CreateErrorRedirect(redirectUri, state, responseMode, "unauthorized_client", "Client not authorized for authorization_code grant");
 
         // Validate PKCE
         if (client.RequirePkce && string.IsNullOrEmpty(codeChallenge))
-            return CreateErrorResponse(redirectUri, state, responseMode, "invalid_request", "PKCE code_challenge is required");
+            return responseBuilder.CreateErrorRedirect(redirectUri, state, responseMode, "invalid_request", "PKCE code_challenge is required");
 
         // Only allow S256 PKCE method - "plain" provides no security benefit
         if (!string.IsNullOrEmpty(codeChallenge) && codeChallengeMethod != "S256")
-            return CreateErrorResponse(redirectUri, state, responseMode, "invalid_request", "Only S256 code_challenge_method is supported");
+            return responseBuilder.CreateErrorRedirect(redirectUri, state, responseMode, "invalid_request", "Only S256 code_challenge_method is supported");
 
         // Parse and validate scopes
         var requestedScopes = scope.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList();
@@ -103,7 +103,7 @@ public static class AuthorizeEndpoint
         }
 
         if (requestedScopes.Contains(StandardScopes.OpenId) && !validScopes.Contains(StandardScopes.OpenId))
-            return CreateErrorResponse(redirectUri, state, responseMode, "invalid_scope", "openid scope is not allowed for this client");
+            return responseBuilder.CreateErrorRedirect(redirectUri, state, responseMode, "invalid_scope", "openid scope is not allowed for this client");
 
         // Validate nonce for OpenID Connect flows
         // Per OIDC spec, nonce is required for implicit flow (we only support code flow where it's optional but recommended)
@@ -113,6 +113,19 @@ public static class AuthorizeEndpoint
             logger.LogWarning("OpenID Connect request without nonce for client {ClientId}. Nonce is recommended for replay protection.", clientId);
         }
 
+        // Build OAuth parameters for URL building
+        var oauthParams = new OAuthParameters
+        {
+            ClientId = clientId,
+            Scope = scope,
+            RedirectUri = redirectUri,
+            State = state,
+            Nonce = nonce,
+            CodeChallenge = codeChallenge,
+            CodeChallengeMethod = codeChallengeMethod,
+            ResponseMode = responseMode
+        };
+
         // Check if user is authenticated
         var userId = context.User.FindFirst("sub")?.Value;
         var userTenantId = context.User.FindFirst("tenant_id")?.Value;
@@ -121,7 +134,7 @@ public static class AuthorizeEndpoint
         {
             // Redirect to tenant-specific login
             var returnUrl = context.Request.Path + context.Request.QueryString;
-            var loginUrl = $"/tenant/{tenant.Identifier}/login?returnUrl={HttpUtility.UrlEncode(returnUrl)}";
+            var loginUrl = urlBuilder.BuildUrlWithReturnUrl($"/tenant/{tenant.Identifier}/login", returnUrl);
             return Results.Redirect(loginUrl);
         }
 
@@ -130,7 +143,7 @@ public static class AuthorizeEndpoint
         var membership = await membershipGrain.GetStateAsync();
 
         if (membership == null || !membership.IsActive)
-            return CreateErrorResponse(redirectUri, state, responseMode, "access_denied", "User is not a member of this tenant");
+            return responseBuilder.CreateErrorRedirect(redirectUri, state, responseMode, "access_denied", "User is not a member of this tenant");
 
         // Get user's organizations in this tenant
         var userGrain = clusterClient.GetGrain<IUserGrain>($"user-{userId}");
@@ -161,15 +174,7 @@ public static class AuthorizeEndpoint
                  userFlow.OrganizationMode == OrganizationRegistrationMode.AutoCreate))
             {
                 // User needs to set up an organization - redirect to setup page
-                var setupUrl = $"/tenant/{tenant.Identifier}/setup-organization?" +
-                    $"client_id={Uri.EscapeDataString(clientId ?? "")}" +
-                    $"&scope={Uri.EscapeDataString(scope ?? "")}" +
-                    $"&redirect_uri={Uri.EscapeDataString(redirectUri ?? "")}" +
-                    $"&state={Uri.EscapeDataString(state ?? "")}" +
-                    $"&nonce={Uri.EscapeDataString(nonce ?? "")}" +
-                    $"&code_challenge={Uri.EscapeDataString(codeChallenge ?? "")}" +
-                    $"&code_challenge_method={Uri.EscapeDataString(codeChallengeMethod ?? "")}" +
-                    $"&response_mode={Uri.EscapeDataString(responseMode ?? "")}";
+                var setupUrl = urlBuilder.BuildUrl($"/tenant/{tenant.Identifier}/setup-organization", oauthParams);
                 return Results.Redirect(setupUrl);
             }
         }
@@ -183,16 +188,7 @@ public static class AuthorizeEndpoint
             // If no default, always redirect to org picker (even for single org)
             if (string.IsNullOrEmpty(selectedOrgId) && prompt != "none")
             {
-                // Use Uri.EscapeDataString to properly encode special characters like '+' as '%2B'
-                var orgPickerUrl = $"/tenant/{tenant.Identifier}/select-organization?" +
-                    $"client_id={Uri.EscapeDataString(clientId ?? "")}" +
-                    $"&scope={Uri.EscapeDataString(scope ?? "")}" +
-                    $"&redirect_uri={Uri.EscapeDataString(redirectUri ?? "")}" +
-                    $"&state={Uri.EscapeDataString(state ?? "")}" +
-                    $"&nonce={Uri.EscapeDataString(nonce ?? "")}" +
-                    $"&code_challenge={Uri.EscapeDataString(codeChallenge ?? "")}" +
-                    $"&code_challenge_method={Uri.EscapeDataString(codeChallengeMethod ?? "")}" +
-                    $"&response_mode={Uri.EscapeDataString(responseMode ?? "")}";
+                var orgPickerUrl = urlBuilder.BuildUrl($"/tenant/{tenant.Identifier}/select-organization", oauthParams);
                 return Results.Redirect(orgPickerUrl);
             }
         }
@@ -203,7 +199,7 @@ public static class AuthorizeEndpoint
             var isValidOrg = userOrgs.Any(o => o.OrganizationId == selectedOrgId);
             if (!isValidOrg)
             {
-                return CreateErrorResponse(redirectUri, state, responseMode, "access_denied", "User is not a member of the selected organization");
+                return responseBuilder.CreateErrorRedirect(redirectUri, state, responseMode, "access_denied", "User is not a member of the selected organization");
             }
         }
 
@@ -212,23 +208,14 @@ public static class AuthorizeEndpoint
         {
             // Check for existing grant
             // For now, always redirect to consent if required
-            // Use Uri.EscapeDataString to properly encode special characters like '+' as '%2B'
-            var consentUrl = $"/tenant/{tenant.Identifier}/consent?" +
-                $"client_id={Uri.EscapeDataString(clientId ?? "")}" +
-                $"&scope={Uri.EscapeDataString(scope ?? "")}" +
-                $"&redirect_uri={Uri.EscapeDataString(redirectUri ?? "")}" +
-                $"&state={Uri.EscapeDataString(state ?? "")}" +
-                $"&nonce={Uri.EscapeDataString(nonce ?? "")}" +
-                $"&code_challenge={Uri.EscapeDataString(codeChallenge ?? "")}" +
-                $"&code_challenge_method={Uri.EscapeDataString(codeChallengeMethod ?? "")}" +
-                $"&response_mode={Uri.EscapeDataString(responseMode ?? "")}" +
-                $"&organization_id={Uri.EscapeDataString(selectedOrgId ?? "")}";
+            var consentParams = oauthParams with { OrganizationId = selectedOrgId };
+            var consentUrl = urlBuilder.BuildUrl($"/tenant/{tenant.Identifier}/consent", consentParams);
             return Results.Redirect(consentUrl);
         }
 
         // Generate authorization code
-        var code = GenerateSecureCode();
-        var codeHash = HashCode(code);
+        var code = oauthTokenGenerator.GenerateToken();
+        var codeHash = oauthTokenGenerator.HashToken(code);
 
         var codeGrain = clusterClient.GetGrain<IAuthorizationCodeGrain>($"{tenant.Id}/code-{codeHash}");
 
@@ -248,95 +235,6 @@ public static class AuthorizeEndpoint
             SelectedOrganizationId = selectedOrgId
         });
 
-        // Build redirect URL
-        var redirectParams = new Dictionary<string, string?>
-        {
-            ["code"] = code,
-            ["state"] = state
-        };
-
-        return CreateSuccessRedirect(redirectUri, redirectParams, responseMode);
-    }
-
-    private static IResult CreateErrorResponse(string? redirectUri, string? state, string responseMode, string error, string? description)
-    {
-        if (string.IsNullOrEmpty(redirectUri))
-        {
-            return Results.BadRequest(new { error, error_description = description });
-        }
-
-        var errorParams = new Dictionary<string, string?>
-        {
-            ["error"] = error,
-            ["error_description"] = description,
-            ["state"] = state
-        };
-
-        return CreateSuccessRedirect(redirectUri, errorParams, responseMode);
-    }
-
-    private static IResult CreateSuccessRedirect(string redirectUri, Dictionary<string, string?> parameters, string responseMode)
-    {
-        if (responseMode == "form_post")
-        {
-            return CreateFormPostResponse(redirectUri, parameters);
-        }
-
-        var queryParams = string.Join("&",
-            parameters.Where(p => p.Value != null).Select(p => $"{p.Key}={HttpUtility.UrlEncode(p.Value)}"));
-
-        var finalUri = responseMode switch
-        {
-            "fragment" => $"{redirectUri}#{queryParams}",
-            _ => redirectUri.Contains('?') ? $"{redirectUri}&{queryParams}" : $"{redirectUri}?{queryParams}"
-        };
-
-        return Results.Redirect(finalUri);
-    }
-
-    private static IResult CreateFormPostResponse(string redirectUri, Dictionary<string, string?> parameters)
-    {
-        // Build hidden form fields
-        var hiddenFields = new StringBuilder();
-        foreach (var param in parameters.Where(p => p.Value != null))
-        {
-            var encodedValue = HttpUtility.HtmlEncode(param.Value);
-            hiddenFields.AppendLine($"<input type=\"hidden\" name=\"{param.Key}\" value=\"{encodedValue}\" />");
-        }
-
-        // Generate HTML page with auto-submitting form
-        var html = $"""
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Submitting...</title>
-            </head>
-            <body onload="document.forms[0].submit()">
-                <noscript>
-                    <p>JavaScript is required. Click the button below to continue.</p>
-                </noscript>
-                <form method="post" action="{HttpUtility.HtmlEncode(redirectUri)}">
-                    {hiddenFields}
-                    <noscript>
-                        <button type="submit">Continue</button>
-                    </noscript>
-                </form>
-            </body>
-            </html>
-            """;
-
-        return Results.Content(html, "text/html");
-    }
-
-    private static string GenerateSecureCode()
-    {
-        var bytes = RandomNumberGenerator.GetBytes(32);
-        return Base64UrlEncoder.Encode(bytes);
-    }
-
-    private static string HashCode(string code)
-    {
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(code));
-        return Base64UrlEncoder.Encode(hash);
+        return responseBuilder.CreateSuccessRedirect(redirectUri, code, state, responseMode);
     }
 }

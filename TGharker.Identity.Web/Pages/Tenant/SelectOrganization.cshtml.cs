@@ -1,22 +1,22 @@
-using System.Security.Cryptography;
-using System.Text;
 using System.Web;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
 using TGHarker.Identity.Abstractions.Grains;
-using TGHarker.Identity.Abstractions.Models;
 using TGharker.Identity.Web.Services;
 
 namespace TGharker.Identity.Web.Pages.Tenant;
 
 public class SelectOrganizationModel : TenantAuthPageModel
 {
+    private readonly IOAuthUrlBuilder _urlBuilder;
+
     public SelectOrganizationModel(
         IClusterClient clusterClient,
         IGrainSearchService searchService,
+        IOAuthUrlBuilder urlBuilder,
         ILogger<SelectOrganizationModel> logger)
         : base(clusterClient, searchService, logger)
     {
+        _urlBuilder = urlBuilder;
     }
 
     // OAuth parameters passed through
@@ -85,7 +85,8 @@ public class SelectOrganizationModel : TenantAuthPageModel
         {
             // Redirect to login
             var returnUrl = HttpContext.Request.Path + HttpContext.Request.QueryString;
-            return Redirect($"/tenant/{Tenant!.Identifier}/login?returnUrl={HttpUtility.UrlEncode(returnUrl)}");
+            var loginUrl = _urlBuilder.BuildUrlWithReturnUrl($"/tenant/{Tenant!.Identifier}/login", returnUrl);
+            return Redirect(loginUrl);
         }
 
         await LoadUserOrganizationsAsync(userId);
@@ -190,24 +191,45 @@ public class SelectOrganizationModel : TenantAuthPageModel
 
     private IActionResult RedirectToAuthorize(string? organizationId)
     {
-        // Use Uri.EscapeDataString instead of HttpUtility.UrlEncode to properly encode
-        // special characters like '+' as '%2B' (UrlEncode treats + as space)
-        var authorizeUrl = $"/tenant/{Tenant!.Identifier}/connect/authorize?" +
-            $"response_type=code" +
-            $"&client_id={Uri.EscapeDataString(ClientId ?? "")}" +
-            $"&redirect_uri={Uri.EscapeDataString(RedirectUri ?? "")}" +
-            $"&scope={Uri.EscapeDataString(Scope ?? "")}" +
-            $"&state={Uri.EscapeDataString(State ?? "")}" +
-            $"&nonce={Uri.EscapeDataString(Nonce ?? "")}" +
-            $"&code_challenge={Uri.EscapeDataString(CodeChallenge ?? "")}" +
-            $"&code_challenge_method={Uri.EscapeDataString(CodeChallengeMethod ?? "")}" +
-            $"&response_mode={Uri.EscapeDataString(ResponseMode ?? "")}";
-
-        if (!string.IsNullOrEmpty(organizationId))
+        var oauthParams = new OAuthParameters
         {
-            authorizeUrl += $"&organization_id={Uri.EscapeDataString(organizationId)}";
-        }
+            ClientId = ClientId,
+            Scope = Scope,
+            RedirectUri = RedirectUri,
+            State = State,
+            Nonce = Nonce,
+            CodeChallenge = CodeChallenge,
+            CodeChallengeMethod = CodeChallengeMethod,
+            ResponseMode = ResponseMode,
+            OrganizationId = organizationId
+        };
+
+        // Build authorize URL with response_type=code prefix
+        var authorizeUrl = $"/tenant/{Tenant!.Identifier}/connect/authorize?response_type=code&" +
+            BuildOAuthQueryString(oauthParams);
 
         return Redirect(authorizeUrl);
+    }
+
+    private static string BuildOAuthQueryString(OAuthParameters parameters)
+    {
+        var parts = new List<string>();
+
+        AppendParam(parts, "client_id", parameters.ClientId);
+        AppendParam(parts, "redirect_uri", parameters.RedirectUri);
+        AppendParam(parts, "scope", parameters.Scope);
+        AppendParam(parts, "state", parameters.State);
+        AppendParam(parts, "nonce", parameters.Nonce);
+        AppendParam(parts, "code_challenge", parameters.CodeChallenge);
+        AppendParam(parts, "code_challenge_method", parameters.CodeChallengeMethod);
+        AppendParam(parts, "response_mode", parameters.ResponseMode);
+        AppendParam(parts, "organization_id", parameters.OrganizationId);
+
+        return string.Join("&", parts);
+    }
+
+    private static void AppendParam(List<string> parts, string name, string? value)
+    {
+        parts.Add($"{name}={Uri.EscapeDataString(value ?? "")}");
     }
 }

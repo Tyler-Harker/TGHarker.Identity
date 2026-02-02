@@ -7,7 +7,7 @@ using TGHarker.Identity.Abstractions.Models;
 
 namespace TGharker.Identity.Web.Pages.Dashboard.Users;
 
-[Authorize]
+[Authorize(Policy = WellKnownPermissions.UsersManageRoles)]
 public class EditModel : PageModel
 {
     private readonly IClusterClient _clusterClient;

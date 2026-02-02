@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using Microsoft.IdentityModel.Tokens;
 using TGHarker.Identity.Abstractions.Grains;
 using TGharker.Identity.Web.Services;
+// ReSharper disable once RedundantUsingDirective (RSA.Create needed)
 
 namespace TGharker.Identity.Web.Endpoints;
 
@@ -31,6 +32,7 @@ public static class IntrospectionEndpoint
         HttpContext context,
         ITenantResolver tenantResolver,
         IClientAuthenticationService clientAuthService,
+        IOAuthTokenGenerator oauthTokenGenerator,
         IClusterClient clusterClient)
     {
         var tenant = await tenantResolver.ResolveAsync(context);
@@ -56,7 +58,7 @@ public static class IntrospectionEndpoint
         // Try refresh token first if hinted or if it's not a JWT
         if (tokenTypeHint == "refresh_token" || !token.Contains('.'))
         {
-            var refreshResult = await IntrospectRefreshTokenAsync(tenant.Id, token, clientResult.Client!.ClientId, clusterClient);
+            var refreshResult = await IntrospectRefreshTokenAsync(tenant.Id, token, clientResult.Client!.ClientId, clusterClient, oauthTokenGenerator);
             if (refreshResult != null)
                 return Results.Ok(refreshResult);
         }
@@ -76,9 +78,10 @@ public static class IntrospectionEndpoint
         string tenantId,
         string token,
         string clientId,
-        IClusterClient clusterClient)
+        IClusterClient clusterClient,
+        IOAuthTokenGenerator oauthTokenGenerator)
     {
-        var tokenHash = HashToken(token);
+        var tokenHash = oauthTokenGenerator.HashToken(token);
         var refreshTokenGrain = clusterClient.GetGrain<IRefreshTokenGrain>($"{tenantId}/rt-{tokenHash}");
 
         var state = await refreshTokenGrain.GetStateAsync();
@@ -172,11 +175,6 @@ public static class IntrospectionEndpoint
         }
     }
 
-    private static string HashToken(string token)
-    {
-        var hash = SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(token));
-        return Base64UrlEncoder.Encode(hash);
-    }
 }
 
 public sealed class IntrospectionResponse

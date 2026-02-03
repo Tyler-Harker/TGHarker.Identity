@@ -43,7 +43,7 @@ stages:
       - job: BuildImages
         displayName: 'Build Docker Images'
         pool:
-          vmImage: 'ubuntu-latest'
+          name: 'Tylers'
         steps:
           - task: Docker@2
             displayName: 'Login to ACR'
@@ -101,7 +101,7 @@ stages:
       - job: ApplyMigrations
         displayName: 'Apply EF Core Migrations'
         pool:
-          vmImage: 'ubuntu-latest'
+          name: 'Tylers'
         steps:
           - task: UseDotNet@2
             displayName: 'Install .NET SDK'
@@ -137,7 +137,7 @@ stages:
       - deployment: DeployToACA
         displayName: 'Deploy to Azure Container Apps'
         pool:
-          vmImage: 'ubuntu-latest'
+          name: 'Tylers'
         environment: 'production'
         strategy:
           runOnce:

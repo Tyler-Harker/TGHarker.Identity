@@ -1,0 +1,174 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Home";
+}
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="display-5">Example Web Application</h1>
+                <p class="lead">This application demonstrates connecting to the Orleans-based identity system using OAuth2/OIDC.</p>
+            </div>
+            <div>
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <div class="text-end">
+                        <span class="me-3">Welcome, <strong>@User.Identity.Name</strong></span>
+                        <a asp-page="/Dashboard" class="btn btn-primary me-2">Dashboard</a>
+                        <a asp-page="/Account/Logout" class="btn btn-outline-secondary">Sign Out</a>
+                    </div>
+                }
+                else
+                {
+                    <a asp-page="/Account/Login" class="btn btn-primary btn-lg">
+                        Sign In with Harker Identity
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- User Card -->
+    <div class="col-md-4">
+        <div class="card h-100 @(Model.User != null ? "border-success" : "border-warning")">
+            <div class="card-header @(Model.User != null ? "bg-success text-white" : "bg-warning")">
+                <h5 class="mb-0">
+                    @if (Model.User != null)
+                    {
+                        <span>&#10003;</span>
+                    }
+                    Seeded User
+                </h5>
+            </div>
+            <div class="card-body">
+                @if (Model.User != null)
+                {
+                    <dl>
+                        <dt>Email</dt>
+                        <dd><code>@Model.User.Email</code></dd>
+                        <dt>Name</dt>
+                        <dd>@Model.User.GivenName @Model.User.FamilyName</dd>
+                    </dl>
+                    <div class="alert alert-info mb-0">
+                        <strong>Test Credentials:</strong><br/>
+                        Email: <code>test@test.com</code><br/>
+                        Password: <code>Password!23</code>
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted">User not found. Check the logs for seeding errors.</p>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Tenant Card -->
+    <div class="col-md-4">
+        <div class="card h-100 @(Model.Tenant != null ? "border-success" : "border-warning")">
+            <div class="card-header @(Model.Tenant != null ? "bg-success text-white" : "bg-warning")">
+                <h5 class="mb-0">
+                    @if (Model.Tenant != null)
+                    {
+                        <span>&#10003;</span>
+                    }
+                    Seeded Tenant
+                </h5>
+            </div>
+            <div class="card-body">
+                @if (Model.Tenant != null)
+                {
+                    <dl>
+                        <dt>Name</dt>
+                        <dd>@Model.Tenant.Name</dd>
+                        <dt>Identifier</dt>
+                        <dd><code>@Model.Tenant.Identifier</code></dd>
+                        <dt>Status</dt>
+                        <dd>
+                            @if (Model.Tenant.IsActive)
+                            {
+                                <span class="badge bg-success">Active</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">Inactive</span>
+                            }
+                        </dd>
+                    </dl>
+                }
+                else
+                {
+                    <p class="text-muted">Tenant not found. Check the logs for seeding errors.</p>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Client Card -->
+    <div class="col-md-4">
+        <div class="card h-100 @(Model.Client != null ? "border-success" : "border-warning")">
+            <div class="card-header @(Model.Client != null ? "bg-success text-white" : "bg-warning")">
+                <h5 class="mb-0">
+                    @if (Model.Client != null)
+                    {
+                        <span>&#10003;</span>
+                    }
+                    Seeded Client
+                </h5>
+            </div>
+            <div class="card-body">
+                @if (Model.Client != null)
+                {
+                    <dl>
+                        <dt>Client Name</dt>
+                        <dd>@Model.Client.ClientName</dd>
+                        <dt>Client ID</dt>
+                        <dd><code>@Model.Client.ClientId</code></dd>
+                        <dt>Type</dt>
+                        <dd>
+                            @if (Model.Client.IsConfidential)
+                            {
+                                <span class="badge bg-info">Confidential</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-primary">Public</span>
+                            }
+                        </dd>
+                        <dt>PKCE Required</dt>
+                        <dd>@(Model.Client.RequirePkce ? "Yes" : "No")</dd>
+                    </dl>
+                }
+                else
+                {
+                    <p class="text-muted">Client not found. Check the logs for seeding errors.</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">OAuth2/OIDC Configuration</h5>
+            </div>
+            <div class="card-body">
+                <p>This application is configured to authenticate against the identity server at:</p>
+                <dl>
+                    <dt>Authority</dt>
+                    <dd><code>@Model.IdentityAuthority</code></dd>
+                    <dt>Client ID</dt>
+                    <dd><code>testweb</code></dd>
+                    <dt>Scopes</dt>
+                    <dd><code>openid profile email</code></dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>

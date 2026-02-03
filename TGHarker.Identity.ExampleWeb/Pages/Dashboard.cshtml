@@ -1,0 +1,113 @@
+@page
+@model DashboardModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="display-5">Dashboard</h1>
+        <p class="lead">You are authenticated! This page demonstrates a protected resource.</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- User Profile Card -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Your Profile</h5>
+            </div>
+            <div class="card-body">
+                <dl>
+                    <dt>Name</dt>
+                    <dd>@(User.Identity?.Name ?? "Unknown")</dd>
+
+                    @foreach (var claim in User.Claims.Where(c => c.Type != "name"))
+                    {
+                        <dt>@claim.Type</dt>
+                        <dd><code>@claim.Value</code></dd>
+                    }
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tokens Card -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">Tokens</h5>
+            </div>
+            <div class="card-body">
+                @if (!string.IsNullOrEmpty(Model.AccessToken))
+                {
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Access Token</label>
+                        <textarea class="form-control font-monospace" rows="4" readonly>@Model.AccessToken</textarea>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(Model.IdToken))
+                {
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">ID Token</label>
+                        <textarea class="form-control font-monospace" rows="4" readonly>@Model.IdToken</textarea>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(Model.RefreshToken))
+                {
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Refresh Token</label>
+                        <textarea class="form-control font-monospace" rows="2" readonly>@Model.RefreshToken</textarea>
+                    </div>
+                }
+
+                @if (Model.ExpiresAt.HasValue)
+                {
+                    <div>
+                        <label class="form-label fw-bold">Token Expires</label>
+                        <p><code>@Model.ExpiresAt.Value.ToString("yyyy-MM-dd HH:mm:ss UTC")</code></p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">All Claims</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-striped table-sm">
+                    <thead>
+                        <tr>
+                            <th>Claim Type</th>
+                            <th>Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var claim in User.Claims)
+                        {
+                            <tr>
+                                <td><code>@claim.Type</code></td>
+                                <td>@claim.Value</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <a asp-page="/Index" class="btn btn-outline-secondary me-2">Back to Home</a>
+        <a asp-page="/Account/Logout" class="btn btn-danger">Sign Out</a>
+    </div>
+</div>

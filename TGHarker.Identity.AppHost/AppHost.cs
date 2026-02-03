@@ -46,6 +46,18 @@ var identityWeb = builder.AddProject<Projects.TGharker_Identity_Web>("identity-w
     .WithEnvironment("SUPERADMIN_USERNAME", superAdminUsername)
     .WithEnvironment("SUPERADMIN_PASSWORD", superAdminPassword);
 
+// Example Web (Demo client application with data seeding)
+var exampleWeb = builder.AddProject<Projects.TGHarker_Identity_ExampleWeb>("example-web")
+    .WithReference(orleans.AsClient())
+    .WaitFor(silo)
+    .WithExternalHttpEndpoints();
+
+// Example Organization Web (Demo client with organization prompt mode)
+var exampleOrgWeb = builder.AddProject<Projects.TGHarker_Identity_ExampleOrganizationWeb>("example-org-web")
+    .WithReference(orleans.AsClient())
+    .WaitFor(silo)
+    .WithExternalHttpEndpoints();
+
 if (!builder.Environment.IsDevelopment())
 {
     identityWeb.PublishAsAzureContainerApp((infra, app) =>

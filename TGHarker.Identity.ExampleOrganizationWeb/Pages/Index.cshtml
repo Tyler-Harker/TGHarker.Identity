@@ -1,0 +1,141 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Home";
+}
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="display-5">Example Organization Web</h1>
+                <p class="lead">This application demonstrates organization prompt mode during registration.</p>
+            </div>
+            <div>
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <div class="text-end">
+                        <span class="me-3">Welcome, <strong>@User.Identity.Name</strong></span>
+                        <a asp-page="/Dashboard" class="btn btn-success me-2">Dashboard</a>
+                        <a asp-page="/Account/Logout" class="btn btn-outline-secondary">Sign Out</a>
+                    </div>
+                }
+                else
+                {
+                    <a asp-page="/Account/Login" class="btn btn-success btn-lg">
+                        Sign In with Organization
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Client Card -->
+    <div class="col-md-6">
+        <div class="card h-100 @(Model.Client != null ? "border-success" : "border-warning")">
+            <div class="card-header @(Model.Client != null ? "bg-success text-white" : "bg-warning")">
+                <h5 class="mb-0">
+                    @if (Model.Client != null)
+                    {
+                        <span>&#10003;</span>
+                    }
+                    Client Configuration
+                </h5>
+            </div>
+            <div class="card-body">
+                @if (Model.Client != null)
+                {
+                    <dl>
+                        <dt>Client Name</dt>
+                        <dd>@Model.Client.ClientName</dd>
+                        <dt>Client ID</dt>
+                        <dd><code>@Model.Client.ClientId</code></dd>
+                        <dt>Type</dt>
+                        <dd>
+                            @if (Model.Client.IsConfidential)
+                            {
+                                <span class="badge bg-info">Confidential</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-primary">Public</span>
+                            }
+                        </dd>
+                        <dt>PKCE Required</dt>
+                        <dd>@(Model.Client.RequirePkce ? "Yes" : "No")</dd>
+                    </dl>
+                }
+                else
+                {
+                    <p class="text-muted">Client not found. Check the logs for seeding errors.</p>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- User Flow Settings Card -->
+    <div class="col-md-6">
+        <div class="card h-100 @(Model.UserFlow != null ? "border-success" : "border-warning")">
+            <div class="card-header @(Model.UserFlow != null ? "bg-success text-white" : "bg-warning")">
+                <h5 class="mb-0">
+                    @if (Model.UserFlow != null)
+                    {
+                        <span>&#10003;</span>
+                    }
+                    User Flow Settings
+                </h5>
+            </div>
+            <div class="card-body">
+                @if (Model.UserFlow != null)
+                {
+                    <dl>
+                        <dt>Organizations Enabled</dt>
+                        <dd>
+                            @if (Model.UserFlow.OrganizationsEnabled)
+                            {
+                                <span class="badge bg-success">Yes</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">No</span>
+                            }
+                        </dd>
+                        <dt>Organization Mode</dt>
+                        <dd><span class="badge bg-primary">@Model.UserFlow.OrganizationMode</span></dd>
+                        <dt>Require Organization Name</dt>
+                        <dd>@(Model.UserFlow.RequireOrganizationName ? "Yes" : "No")</dd>
+                        <dt>Organization Name Label</dt>
+                        <dd>@(Model.UserFlow.OrganizationNameLabel ?? "N/A")</dd>
+                        <dt>Help Text</dt>
+                        <dd>@(Model.UserFlow.OrganizationHelpText ?? "N/A")</dd>
+                    </dl>
+                }
+                else
+                {
+                    <p class="text-muted">User flow settings not found.</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card border-info">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">About Organization Prompt Mode</h5>
+            </div>
+            <div class="card-body">
+                <p>This client is configured with <strong>Organization Prompt Mode</strong>, which means:</p>
+                <ul>
+                    <li>During registration, users will be prompted to create or specify an organization</li>
+                    <li>The organization name field is required</li>
+                    <li>Users can collaborate with team members within their organization</li>
+                </ul>
+                <p class="mb-0">Click "Sign In" and register a new user to see the organization prompt in action.</p>
+            </div>
+        </div>
+    </div>
+</div>

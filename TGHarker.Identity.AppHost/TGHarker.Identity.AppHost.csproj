@@ -16,6 +16,8 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\TGharker.Identity.Web\TGharker.Identity.Web.csproj" />
+    <ProjectReference Include="..\TGHarker.Identity.ExampleWeb\TGHarker.Identity.ExampleWeb.csproj" />
+    <ProjectReference Include="..\TGHarker.Identity.ExampleOrganizationWeb\TGHarker.Identity.ExampleOrganizationWeb.csproj" />
     <ProjectReference Include="..\TGHarker.Identity.Silo\TGHarker.Identity.Silo.csproj" />
   </ItemGroup>
 </Project>

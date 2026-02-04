@@ -69,7 +69,9 @@ public sealed class DataSeedingService : BackgroundService
             PostLogoutRedirectUris =
             [
                 "http://localhost:5210/",
-                "https://localhost:7210/"
+                "https://localhost:7210/",
+                "http://localhost:5210/signout-callback-oidc",
+                "https://localhost:7210/signout-callback-oidc"
             ],
             AllowedScopes = ["openid", "profile", "email"],
             AllowedGrantTypes = ["authorization_code", "refresh_token"],

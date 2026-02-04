@@ -48,6 +48,7 @@ builder.Services.AddAuthentication(options =>
 
     options.CallbackPath = "/signin-oidc";
     options.SignedOutCallbackPath = "/signout-callback-oidc";
+    options.SignedOutRedirectUri = "/";
 
     // Development: disable HTTPS metadata requirement and certificate validation
     if (builder.Environment.IsDevelopment())

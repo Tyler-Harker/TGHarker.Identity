@@ -325,6 +325,7 @@ app.MapTokenEndpoint();
 app.MapUserInfoEndpoint();
 app.MapRevocationEndpoint();
 app.MapIntrospectionEndpoint();
+app.MapEndSessionEndpoint();
 app.MapTenantEndpoints();
 app.MapStatsEndpoint();
 app.MapThemeEndpoint();

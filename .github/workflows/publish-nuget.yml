@@ -1,0 +1,200 @@
+name: Publish NuGet Package
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'TGHarker.Identity.Client/**'
+      - '.github/workflows/publish-nuget.yml'
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required for creating tags and releases
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for version calculation
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Calculate next version
+        id: version
+        run: |
+          # Get the latest tag
+          LATEST_TAG=$(git tag -l "v*" --sort=-version:refname | head -n 1)
+
+          if [ -z "$LATEST_TAG" ]; then
+            # No tags yet, start with 1.0.0
+            NEW_VERSION="1.0.0"
+            echo "No existing tags found, starting with v1.0.0"
+          else
+            echo "Latest tag: $LATEST_TAG"
+            # Remove 'v' prefix and split version
+            CURRENT_VERSION=${LATEST_TAG#v}
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+
+            # Get commits since last tag that affect the Client directory
+            COMMITS=$(git log $LATEST_TAG..HEAD --pretty=format:"%s" -- TGHarker.Identity.Client/)
+
+            if [ -z "$COMMITS" ]; then
+              echo "No changes to Client since last tag, skipping release"
+              echo "should_publish=false" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+
+            echo "Commits since last tag:"
+            echo "$COMMITS"
+
+            # Determine version bump based on conventional commits
+            if echo "$COMMITS" | grep -qiE "^(BREAKING CHANGE:|feat!:|fix!:)"; then
+              # Major version bump for breaking changes
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              echo "Detected breaking changes, bumping MAJOR version"
+            elif echo "$COMMITS" | grep -qiE "^feat(\(.*\))?:"; then
+              # Minor version bump for new features
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              echo "Detected new features, bumping MINOR version"
+            else
+              # Patch version bump for everything else
+              PATCH=$((PATCH + 1))
+              echo "Detected fixes/changes, bumping PATCH version"
+            fi
+
+            NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+          fi
+
+          echo "should_publish=true" >> $GITHUB_OUTPUT
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "Next version: $NEW_VERSION"
+
+      - name: Restore dependencies
+        if: steps.version.outputs.should_publish == 'true'
+        run: dotnet restore TGHarker.Identity.Client/TGHarker.Identity.Client.csproj
+
+      - name: Build
+        if: steps.version.outputs.should_publish == 'true'
+        run: dotnet build TGHarker.Identity.Client/TGHarker.Identity.Client.csproj --configuration Release --no-restore
+
+      - name: Check if version exists on NuGet
+        if: steps.version.outputs.should_publish == 'true'
+        id: check-version
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          echo "Checking if version $VERSION exists on NuGet..."
+
+          # Query NuGet to see if this version exists
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://api.nuget.org/v3-flatcontainer/tgharker.identity.client/$VERSION/tgharker.identity.client.nuspec")
+
+          if [ "$STATUS" = "200" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Version $VERSION already exists on NuGet, skipping publish"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Version $VERSION does not exist on NuGet, will publish"
+          fi
+
+      - name: Create Git Tag
+        if: steps.version.outputs.should_publish == 'true' && steps.check-version.outputs.exists == 'false'
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          VERSION="${{ steps.version.outputs.version }}"
+
+          # Get commit messages for release notes
+          LATEST_TAG=$(git tag -l "v*" --sort=-version:refname | head -n 1)
+          if [ -n "$LATEST_TAG" ]; then
+            COMMITS=$(git log $LATEST_TAG..HEAD --pretty=format:"- %s (%h)" -- TGHarker.Identity.Client/)
+          else
+            COMMITS=$(git log --pretty=format:"- %s (%h)" -- TGHarker.Identity.Client/)
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "Release $TAG"$'\n\n'"Changes:"$'\n'"$COMMITS"
+          git push origin "$TAG"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pack NuGet package
+        if: steps.version.outputs.should_publish == 'true' && steps.check-version.outputs.exists == 'false'
+        run: |
+          # Use the version we calculated (MinVer will now pick up the tag we just created)
+          dotnet pack TGHarker.Identity.Client/TGHarker.Identity.Client.csproj \
+            --configuration Release \
+            --no-build \
+            --output ./artifacts \
+            /p:Version=${{ steps.version.outputs.version }}
+
+      - name: Publish to NuGet
+        if: steps.version.outputs.should_publish == 'true' && steps.check-version.outputs.exists == 'false'
+        run: dotnet nuget push ./artifacts/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+
+      - name: Generate Release Notes
+        if: steps.version.outputs.should_publish == 'true' && steps.check-version.outputs.exists == 'false'
+        id: release-notes
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          LATEST_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
+
+          if [ -n "$LATEST_TAG" ]; then
+            COMMITS=$(git log $LATEST_TAG..HEAD --pretty=format:"- %s (%h)" -- TGHarker.Identity.Client/)
+          else
+            COMMITS=$(git log --pretty=format:"- %s (%h)" -- TGHarker.Identity.Client/)
+          fi
+
+          # Categorize commits
+          BREAKING=$(echo "$COMMITS" | grep -iE "^- (BREAKING CHANGE|feat!|fix!):" || true)
+          FEATURES=$(echo "$COMMITS" | grep -iE "^- feat(\(.*\))?:" | grep -viE "!" || true)
+          FIXES=$(echo "$COMMITS" | grep -iE "^- fix(\(.*\))?:" | grep -viE "!" || true)
+          OTHER=$(echo "$COMMITS" | grep -viE "^- (feat|fix|BREAKING)" || true)
+
+          # Build release notes
+          NOTES="## TGHarker.Identity.Client v$VERSION"$'\n\n'
+          NOTES+="Published to NuGet: https://www.nuget.org/packages/TGHarker.Identity.Client/$VERSION"$'\n\n'
+          NOTES+='```bash'$'\n'
+          NOTES+="dotnet add package TGHarker.Identity.Client --version $VERSION"$'\n'
+          NOTES+='```'$'\n\n'
+
+          if [ -n "$BREAKING" ]; then
+            NOTES+="### ⚠️ Breaking Changes"$'\n'"$BREAKING"$'\n\n'
+          fi
+
+          if [ -n "$FEATURES" ]; then
+            NOTES+="### ✨ Features"$'\n'"$FEATURES"$'\n\n'
+          fi
+
+          if [ -n "$FIXES" ]; then
+            NOTES+="### 🐛 Bug Fixes"$'\n'"$FIXES"$'\n\n'
+          fi
+
+          if [ -n "$OTHER" ]; then
+            NOTES+="### 📝 Other Changes"$'\n'"$OTHER"$'\n\n'
+          fi
+
+          # Save to file for the next step
+          echo "$NOTES" > release-notes.md
+          echo "Release notes generated"
+
+      - name: Create GitHub Release
+        if: steps.version.outputs.should_publish == 'true' && steps.check-version.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Release ${{ steps.version.outputs.tag }}
+          body_path: release-notes.md
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

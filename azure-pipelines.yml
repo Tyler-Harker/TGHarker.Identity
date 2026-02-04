@@ -17,6 +17,14 @@ trigger:
   branches:
     include:
       - master
+  paths:
+    exclude:
+      - TGHarker.Identity.Client/**
+      - TGHarker.Identity.ExampleWeb/**
+      - TGHarker.Identity.ExampleOrganizationWeb/**
+      - '*.md'
+      - .github/**
+      - docs/**
 
 variables:
   # Container Registry

@@ -18,8 +18,8 @@ builder.Services.AddSingleton<ClientSecretStore>();
 // Register data seeding service (seeds client via Orleans)
 builder.Services.AddHostedService<DataSeedingService>();
 
-// Register permission sync service (syncs permissions/roles via SDK after DataSeedingService sets the secret)
-builder.Services.AddHostedService<PermissionSyncService>();
+// Note: PermissionSyncService is no longer needed since we're using SyncOnStartup = true
+// with a hardcoded secret in the IdentityClient configuration
 
 // Add Razor Pages
 builder.Services.AddRazorPages();
@@ -29,17 +29,16 @@ var identityUrl = builder.Configuration["Identity:Authority"] ?? "https://localh
 var tenantId = builder.Configuration["Identity:TenantId"] ?? "test";
 
 // Configure TGHarker.Identity.Client for application permissions/roles
-// Note: SyncOnStartup is disabled because PermissionSyncService handles sync manually
-// after DataSeedingService creates the client and provides the secret.
+// ⚠️ TESTING ONLY: Using hardcoded secret for deterministic example/testing scenarios
 // Permissions and roles defined here are synced to the identity server on startup.
 builder.Services.AddTGHarkerIdentityClient(
     options =>
     {
         options.Authority = identityUrl;
         options.ClientId = "testorgweb";
-        options.ClientSecret = "unused"; // Not used - PermissionSyncService gets secret from ClientSecretStore
+        options.ClientSecret = "Hardcoded testing secret"; // ⚠️ HARDCODED FOR TESTING ONLY
         options.TenantId = tenantId;
-        options.SyncOnStartup = false; // Disabled - PermissionSyncService handles sync
+        options.SyncOnStartup = true; // Sync permissions/roles on startup
     },
     permissions =>
     {
@@ -104,6 +103,7 @@ builder.Services.AddAuthentication(options =>
 {
     options.Authority = $"{identityUrl}/tenant/{tenantId}";
     options.ClientId = "testorgweb";
+    options.ClientSecret = "Hardcoded testing secret";
     options.ResponseType = OpenIdConnectResponseType.Code;
     options.SaveTokens = true;
     options.GetClaimsFromUserInfoEndpoint = false;

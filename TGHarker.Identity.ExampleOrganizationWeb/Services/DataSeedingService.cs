@@ -13,6 +13,9 @@ public sealed class DataSeedingService(
     ClientSecretStore secretStore,
     ILogger<DataSeedingService> logger) : BackgroundService
 {
+    // ⚠️ HARDCODED SECRET FOR TESTING/EXAMPLE PURPOSES ONLY - DO NOT USE IN PRODUCTION ⚠️
+    private const string TestClientSecret = "Hardcoded testing secret";
+
     private const string TestTenantIdentifier = "test";
     private const string TestClientId = "testorgweb";
     private const string TestClientName = "TestOrgWeb";
@@ -47,17 +50,13 @@ public sealed class DataSeedingService(
 
         if (await clientGrain.ExistsAsync())
         {
-            logger.LogInformation("Client {ClientId} already exists, creating new secret for sync", TestClientId);
+            logger.LogInformation("Client {ClientId} already exists, setting known secret for testing", TestClientId);
 
-            // Client exists, but we need a fresh secret for the sync service
-            var secretResult = await clientGrain.AddSecretAsync("PermissionSync secret", null);
-            if (!secretResult.Success || string.IsNullOrEmpty(secretResult.PlainTextSecret))
-            {
-                throw new InvalidOperationException($"Failed to create client secret: {secretResult.Error}");
-            }
+            // ⚠️ TESTING ONLY: Set a hardcoded secret for deterministic example/testing scenarios
+            await clientGrain.AddKnownClientSecret_TESTING_ONLY(TestClientSecret, "Hardcoded testing secret");
 
-            logger.LogInformation("Created new client secret for existing client");
-            return secretResult.PlainTextSecret;
+            logger.LogInformation("Set known client secret for existing client (TESTING ONLY)");
+            return TestClientSecret;
         }
 
         var result = await clientGrain.CreateAsync(new CreateClientRequest
@@ -106,14 +105,10 @@ public sealed class DataSeedingService(
             throw new InvalidOperationException($"Failed to create client: {result.Error}");
         }
 
-        // Add a secret for development
-        var secretResult2 = await clientGrain.AddSecretAsync("Development secret", null);
-        if (!secretResult2.Success || string.IsNullOrEmpty(secretResult2.PlainTextSecret))
-        {
-            throw new InvalidOperationException($"Failed to create client secret: {secretResult2.Error}");
-        }
+        // ⚠️ TESTING ONLY: Set a hardcoded secret for deterministic example/testing scenarios
+        await clientGrain.AddKnownClientSecret_TESTING_ONLY(TestClientSecret, "Hardcoded testing secret");
 
-        logger.LogInformation("Client secret created for new client");
+        logger.LogInformation("Client secret set for new client (TESTING ONLY)");
 
         // Register client with tenant
         var tenantGrain = clusterClient.GetGrain<ITenantGrain>(TestTenantIdentifier);
@@ -121,6 +116,6 @@ public sealed class DataSeedingService(
 
         logger.LogInformation("Created confidential client {ClientId} for tenant {TenantId} with organization prompt mode", TestClientId, TestTenantIdentifier);
 
-        return secretResult2.PlainTextSecret;
+        return TestClientSecret;
     }
 }

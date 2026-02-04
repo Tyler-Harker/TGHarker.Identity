@@ -179,15 +179,20 @@ public static class AuthorizeEndpoint
             }
         }
 
-        // If user has organizations but none selected, check for default or redirect to picker
+        // If user has organizations but none selected, check if client requires organization selection
         if (userOrgs.Count > 0 && string.IsNullOrEmpty(selectedOrgId))
         {
-            // If no default, always redirect to org picker (even for single org)
-            if (string.IsNullOrEmpty(selectedOrgId) && prompt != "none")
+            // Get client's UserFlow settings to check if organizations are enabled for this client
+            var userFlow = await clientGrain.GetUserFlowSettingsAsync();
+
+            // Only redirect to org picker if organizations are enabled for this client
+            if (userFlow?.OrganizationsEnabled == true && prompt != "none")
             {
                 var orgPickerUrl = urlBuilder.BuildUrl($"/tenant/{tenant.Identifier}/select-organization", oauthParams);
                 return Results.Redirect(orgPickerUrl);
             }
+            // If organizations are not enabled for this client, proceed without organization selection
+            // (selectedOrgId remains null)
         }
 
         // Validate selected organization if provided

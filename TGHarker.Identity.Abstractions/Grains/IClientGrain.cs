@@ -89,4 +89,16 @@ public interface IClientGrain : IGrainWithStringKey
     /// Only system roles are affected; user-created roles are left untouched.
     /// </summary>
     Task<SyncRolesResult> SyncSystemRolesAsync(IReadOnlyList<ApplicationRole> roles);
+
+    /// <summary>
+    /// ⚠️ TESTING AND DATA SEEDING ONLY - DO NOT USE IN PRODUCTION CODE ⚠️
+    /// Adds a known client secret with a hardcoded value for testing and example projects.
+    /// This allows deterministic secrets for development and demonstration purposes.
+    /// WARNING: This bypasses secure secret generation and should NEVER be used outside of
+    /// local development, testing, or initial data seeding scenarios.
+    /// </summary>
+    /// <param name="plainTextSecret">The known secret value to add (will be hashed before storage)</param>
+    /// <param name="description">Description for the secret (e.g., "Seeded for testing")</param>
+    /// <returns>True if the secret was added successfully</returns>
+    Task<bool> AddKnownClientSecret_TESTING_ONLY(string plainTextSecret, string description);
 }

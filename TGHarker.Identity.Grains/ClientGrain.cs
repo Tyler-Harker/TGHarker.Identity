@@ -230,6 +230,34 @@ public sealed class ClientGrain : Grain, IClientGrain
         return removed;
     }
 
+    /// <summary>
+    /// ⚠️ TESTING AND DATA SEEDING ONLY - DO NOT USE IN PRODUCTION CODE ⚠️
+    /// Adds a known client secret with a hardcoded value for testing and example projects.
+    /// This allows deterministic secrets for development and demonstration purposes.
+    /// WARNING: This bypasses secure secret generation and should NEVER be used outside of
+    /// local development, testing, or initial data seeding scenarios.
+    /// Using known secrets in production creates severe security vulnerabilities.
+    /// </summary>
+    public async Task<bool> AddKnownClientSecret_TESTING_ONLY(string plainTextSecret, string description)
+    {
+        var secretHash = HashSecret(plainTextSecret);
+        var secretId = Guid.NewGuid().ToString();
+
+        // Clear existing secrets - only one active secret allowed at a time
+        _state.State.Secrets.Clear();
+
+        _state.State.Secrets.Add(new ClientSecret
+        {
+            Id = secretId,
+            Description = description,
+            SecretHash = secretHash,
+            CreatedAt = DateTime.UtcNow
+        });
+
+        await _state.WriteStateAsync();
+        return true;
+    }
+
     public Task<bool> ValidateRedirectUriAsync(string redirectUri)
     {
         // Exact match required for security

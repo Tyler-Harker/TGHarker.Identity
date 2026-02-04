@@ -111,10 +111,8 @@ stages:
 
           - script: |
               dotnet tool install --global dotnet-ef || dotnet tool update --global dotnet-ef
-              export PATH="$PATH:$HOME/.dotnet/tools"
-              echo "##vso[task.prependpath]$HOME/.dotnet/tools"
               echo "Installed dotnet-ef version:"
-              dotnet ef --version
+              $HOME/.dotnet/tools/dotnet-ef --version
             displayName: 'Install EF Core Tools'
 
           - script: dotnet restore
@@ -124,14 +122,8 @@ stages:
             displayName: 'Build Silo Project'
 
           - script: |
-              echo "PATH: $PATH"
-              echo "Checking dotnet tools location:"
-              ls -la $HOME/.dotnet/tools/ || echo "Tools directory not found"
-              export PATH="$PATH:$HOME/.dotnet/tools"
-              echo "dotnet-ef version:"
-              dotnet ef --version
               echo "Running migration..."
-              dotnet ef database update \
+              $HOME/.dotnet/tools/dotnet-ef database update \
                 --project TGHarker.Identity.Silo/TGHarker.Identity.Silo.csproj \
                 --startup-project TGHarker.Identity.Silo/TGHarker.Identity.Silo.csproj \
                 --no-build \

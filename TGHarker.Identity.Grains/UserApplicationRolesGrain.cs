@@ -85,15 +85,45 @@ public sealed class UserApplicationRolesGrain : Grain, IUserApplicationRolesGrai
             return; // Already assigned
         }
 
+        var assignedAt = DateTime.UtcNow;
+
         _state.State.RoleAssignments.Add(new ApplicationRoleAssignment
         {
             RoleId = roleId,
             Scope = scope,
             OrganizationId = organizationId,
-            AssignedAt = DateTime.UtcNow
+            AssignedAt = assignedAt
         });
 
         await _state.WriteStateAsync();
+
+        // Also create searchable assignment grain
+        var assignmentId = GenerateAssignmentId(roleId, organizationId);
+        var assignmentGrain = _grainFactory.GetGrain<IApplicationRoleAssignmentGrain>(
+            $"{_tenantId}/client-{_clientId}/assignment-{assignmentId}");
+
+        await assignmentGrain.CreateAsync(new ApplicationRoleAssignmentState
+        {
+            UserId = _userId!,
+            TenantId = _tenantId!,
+            ClientId = _clientId!,
+            ApplicationId = _clientId!, // Same as ClientId for consistency
+            RoleId = roleId,
+            Scope = scope,
+            OrganizationId = organizationId,
+            AssignedAt = assignedAt,
+            IsActive = true
+        });
+    }
+
+    private string GenerateAssignmentId(string roleId, string? organizationId)
+    {
+        // Create a deterministic ID based on user, role and org
+        if (string.IsNullOrEmpty(organizationId))
+        {
+            return $"user-{_userId}-role-{roleId}";
+        }
+        return $"user-{_userId}-role-{roleId}-org-{organizationId}";
     }
 
     public async Task RemoveRoleAsync(string roleId, string? organizationId = null)
@@ -118,6 +148,13 @@ public sealed class UserApplicationRolesGrain : Grain, IUserApplicationRolesGrai
         if (removed > 0)
         {
             await _state.WriteStateAsync();
+
+            // Also delete the searchable assignment grain
+            var assignmentId = GenerateAssignmentId(roleId, organizationId);
+            var assignmentGrain = _grainFactory.GetGrain<IApplicationRoleAssignmentGrain>(
+                $"{_tenantId}/client-{_clientId}/assignment-{assignmentId}");
+
+            await assignmentGrain.DeleteAsync();
         }
     }
 
@@ -185,6 +222,17 @@ public sealed class UserApplicationRolesGrain : Grain, IUserApplicationRolesGrai
     {
         if (_state.State.RoleAssignments.Count > 0)
         {
+            // Delete all assignment grains
+            var deleteTasks = _state.State.RoleAssignments.Select(a =>
+            {
+                var assignmentId = GenerateAssignmentId(a.RoleId, a.OrganizationId);
+                var assignmentGrain = _grainFactory.GetGrain<IApplicationRoleAssignmentGrain>(
+                    $"{_tenantId}/client-{_clientId}/assignment-{assignmentId}");
+                return assignmentGrain.DeleteAsync();
+            });
+
+            await Task.WhenAll(deleteTasks);
+
             _state.State.RoleAssignments.Clear();
             await _state.WriteStateAsync();
         }

@@ -50,12 +50,14 @@ var identityWeb = builder.AddProject<Projects.TGharker_Identity_Web>("identity-w
 var exampleWeb = builder.AddProject<Projects.TGHarker_Identity_ExampleWeb>("example-web")
     .WithReference(orleans.AsClient())
     .WaitFor(silo)
+    .WaitFor(identityWeb)
     .WithExternalHttpEndpoints();
 
 // Example Organization Web (Demo client with organization prompt mode)
 var exampleOrgWeb = builder.AddProject<Projects.TGHarker_Identity_ExampleOrganizationWeb>("example-org-web")
     .WithReference(orleans.AsClient())
     .WaitFor(silo)
+    .WaitFor(identityWeb)
     .WithExternalHttpEndpoints();
 
 if (!builder.Environment.IsDevelopment())

@@ -298,6 +298,12 @@ public sealed class ClientGrain : Grain, IClientGrain
         var existing = _state.State.ApplicationPermissions.FirstOrDefault(p => p.Name == name);
         if (existing != null)
         {
+            // Cannot modify system permissions through this method
+            if (existing.IsSystem)
+            {
+                throw new InvalidOperationException($"Cannot modify system permission '{name}'. Use SyncSystemPermissionsAsync instead.");
+            }
+
             // Update existing permission
             existing.DisplayName = displayName;
             existing.Description = description;
@@ -309,7 +315,8 @@ public sealed class ClientGrain : Grain, IClientGrain
         {
             Name = name,
             DisplayName = displayName,
-            Description = description
+            Description = description,
+            IsSystem = false
         };
 
         _state.State.ApplicationPermissions.Add(permission);
@@ -319,17 +326,24 @@ public sealed class ClientGrain : Grain, IClientGrain
 
     public async Task<bool> RemovePermissionAsync(string name)
     {
-        var removed = _state.State.ApplicationPermissions.RemoveAll(p => p.Name == name) > 0;
-        if (removed)
+        var permission = _state.State.ApplicationPermissions.FirstOrDefault(p => p.Name == name);
+        if (permission == null)
+            return false;
+
+        // Cannot remove system permissions through this method
+        if (permission.IsSystem)
+            return false;
+
+        _state.State.ApplicationPermissions.Remove(permission);
+
+        // Also remove the permission from all non-system roles that have it
+        foreach (var role in _state.State.ApplicationRoles.Where(r => !r.IsSystem))
         {
-            // Also remove the permission from all roles that have it
-            foreach (var role in _state.State.ApplicationRoles)
-            {
-                role.Permissions.Remove(name);
-            }
-            await _state.WriteStateAsync();
+            role.Permissions.Remove(name);
         }
-        return removed;
+
+        await _state.WriteStateAsync();
+        return true;
     }
 
     public Task<IReadOnlyList<ApplicationPermission>> GetApplicationPermissionsAsync()
@@ -372,6 +386,12 @@ public sealed class ClientGrain : Grain, IClientGrain
         var role = _state.State.ApplicationRoles.FirstOrDefault(r => r.Id == roleId);
         if (role == null)
             return null;
+
+        // Cannot modify system roles through this method
+        if (role.IsSystem)
+        {
+            throw new InvalidOperationException($"Cannot modify system role '{role.Name}'. Use SyncSystemRolesAsync instead.");
+        }
 
         if (name != null)
             role.Name = name;
@@ -446,6 +466,185 @@ public sealed class ClientGrain : Grain, IClientGrain
     {
         _state.State.IncludePermissionsInToken = include;
         await _state.WriteStateAsync();
+    }
+
+    #endregion
+
+    #region System Permissions/Roles Sync
+
+    public async Task<SyncPermissionsResult> SyncSystemPermissionsAsync(IReadOnlyList<ApplicationPermission> permissions)
+    {
+        var result = new SyncPermissionsResult { Success = true };
+
+        // Ensure all incoming permissions are marked as system
+        var incomingNames = new HashSet<string>();
+        foreach (var perm in permissions)
+        {
+            perm.IsSystem = true;
+            incomingNames.Add(perm.Name);
+        }
+
+        // First, mark any existing permissions with matching names as system
+        // This handles the case where permissions were created before sync was used
+        foreach (var existingPerm in _state.State.ApplicationPermissions)
+        {
+            if (incomingNames.Contains(existingPerm.Name))
+            {
+                existingPerm.IsSystem = true;
+            }
+        }
+
+        // Find existing system permissions (now includes any we just marked)
+        var existingSystemPerms = _state.State.ApplicationPermissions
+            .Where(p => p.IsSystem)
+            .ToDictionary(p => p.Name);
+
+        // Remove system permissions that are no longer defined
+        var toRemove = existingSystemPerms.Keys.Except(incomingNames).ToList();
+        foreach (var name in toRemove)
+        {
+            _state.State.ApplicationPermissions.RemoveAll(p => p.Name == name && p.IsSystem);
+
+            // Also remove from system roles
+            foreach (var role in _state.State.ApplicationRoles.Where(r => r.IsSystem))
+            {
+                role.Permissions.Remove(name);
+            }
+
+            result.Removed++;
+        }
+
+        // Add or update permissions
+        foreach (var perm in permissions)
+        {
+            if (existingSystemPerms.TryGetValue(perm.Name, out var existing))
+            {
+                // Update existing
+                existing.DisplayName = perm.DisplayName;
+                existing.Description = perm.Description;
+                result.Updated++;
+            }
+            else
+            {
+                // Check if a user-created permission with this name exists
+                var userPerm = _state.State.ApplicationPermissions.FirstOrDefault(p => p.Name == perm.Name && !p.IsSystem);
+                if (userPerm != null)
+                {
+                    // Convert to system permission
+                    userPerm.IsSystem = true;
+                    userPerm.DisplayName = perm.DisplayName;
+                    userPerm.Description = perm.Description;
+                    result.Updated++;
+                }
+                else
+                {
+                    // Add new
+                    _state.State.ApplicationPermissions.Add(perm);
+                    result.Added++;
+                }
+            }
+        }
+
+        await _state.WriteStateAsync();
+        return result;
+    }
+
+    public async Task<SyncRolesResult> SyncSystemRolesAsync(IReadOnlyList<ApplicationRole> roles)
+    {
+        var result = new SyncRolesResult { Success = true };
+        var now = DateTime.UtcNow;
+
+        // Validate all permissions exist
+        var validPermissionNames = _state.State.ApplicationPermissions.Select(p => p.Name).ToHashSet();
+
+        // Ensure all incoming roles are marked as system and have valid permissions
+        var incomingIds = new HashSet<string>();
+        foreach (var role in roles)
+        {
+            role.IsSystem = true;
+            if (string.IsNullOrEmpty(role.Id))
+            {
+                role.Id = Guid.NewGuid().ToString();
+            }
+            incomingIds.Add(role.Id);
+
+            // Validate permissions
+            var invalidPerms = role.Permissions.Where(p => !validPermissionNames.Contains(p)).ToList();
+            if (invalidPerms.Count > 0)
+            {
+                result.Success = false;
+                result.Error = $"Role '{role.Name}' references unknown permissions: {string.Join(", ", invalidPerms)}";
+                return result;
+            }
+        }
+
+        // Find existing system roles
+        var existingSystemRoles = _state.State.ApplicationRoles
+            .Where(r => r.IsSystem)
+            .ToDictionary(r => r.Id);
+
+        // Also index by name for matching
+        var existingByName = _state.State.ApplicationRoles
+            .Where(r => r.IsSystem)
+            .ToDictionary(r => r.Name);
+
+        // Remove system roles that are no longer defined
+        var toRemove = existingSystemRoles.Keys.Except(incomingIds).ToList();
+        foreach (var id in toRemove)
+        {
+            var roleToRemove = existingSystemRoles[id];
+
+            // Check if there's an incoming role with the same name (ID changed)
+            var replacementByName = roles.FirstOrDefault(r => r.Name == roleToRemove.Name);
+            if (replacementByName == null)
+            {
+                _state.State.ApplicationRoles.RemoveAll(r => r.Id == id && r.IsSystem);
+
+                // Clear default role if removing it
+                if (_state.State.DefaultApplicationRoleId == id)
+                {
+                    _state.State.DefaultApplicationRoleId = null;
+                }
+
+                result.Removed++;
+            }
+        }
+
+        // Add or update roles
+        foreach (var role in roles)
+        {
+            if (existingSystemRoles.TryGetValue(role.Id, out var existing))
+            {
+                // Update existing by ID
+                existing.Name = role.Name;
+                existing.DisplayName = role.DisplayName;
+                existing.Description = role.Description;
+                existing.Permissions = role.Permissions.ToList();
+                result.Updated++;
+            }
+            else if (existingByName.TryGetValue(role.Name, out var existingByNameRole))
+            {
+                // Role with same name but different ID - update it
+                existingByNameRole.Id = role.Id;
+                existingByNameRole.DisplayName = role.DisplayName;
+                existingByNameRole.Description = role.Description;
+                existingByNameRole.Permissions = role.Permissions.ToList();
+                result.Updated++;
+            }
+            else
+            {
+                // Add new
+                if (role.CreatedAt == default)
+                {
+                    role.CreatedAt = now;
+                }
+                _state.State.ApplicationRoles.Add(role);
+                result.Added++;
+            }
+        }
+
+        await _state.WriteStateAsync();
+        return result;
     }
 
     #endregion

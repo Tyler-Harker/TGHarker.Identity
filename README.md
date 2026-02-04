@@ -14,6 +14,7 @@ TGHarker.Identity is a self-hosted identity platform that provides complete auth
 - **User Management** - Registration, email verification, password management, and account lockout
 - **Organization Support** - Create organizations within tenants with membership and roles
 - **Role-Based Access Control** - Tenant and organization-level roles with permissions
+- **Application Roles & Permissions** - Define application-specific permissions and roles with automatic token inclusion
 - **JWT Tokens** - RSA256-signed access tokens and ID tokens
 - **Distributed Architecture** - Scalable via Orleans virtual actors
 
@@ -37,6 +38,7 @@ TGHarker.Identity.AppHost (Aspire Orchestrator)
 | `TGHarker.Identity.Silo` | Orleans silo server for grain execution |
 | `TGHarker.Identity.Grains` | Domain logic implemented as Orleans grains |
 | `TGHarker.Identity.Abstractions` | Shared interfaces, models, and DTOs |
+| `TGHarker.Identity.Client` | Client library for registering application permissions/roles |
 | `TGHarker.Identity.ServiceDefaults` | Aspire defaults and OpenTelemetry configuration |
 | `TGHarker.Identity.Tests` | Unit tests |
 
@@ -187,6 +189,74 @@ window.location.href = `/tenant/${tenantId}/connect/authorize?...&organization_i
 
 Users can set a default organization when selecting one during login by checking "Remember this choice for future logins". This default is stored per-tenant and will be used automatically for future authorization requests.
 
+## Application Roles & Permissions
+
+Applications can define their own permissions and roles that are included in access tokens. This enables fine-grained authorization within your applications.
+
+### Key Concepts
+
+- **Application Permissions** - Actions users can perform (e.g., `project:read`, `admin:users`)
+- **Application Roles** - Named groupings of permissions (e.g., `viewer`, `editor`, `admin`)
+- **System Permissions/Roles** - Defined by the application itself via Client Credentials Flow, cannot be modified by tenant admins
+- **User-Created Permissions/Roles** - Created by tenant admins via the dashboard
+
+### Role Assignment Scopes
+
+Roles can be assigned to users at two scopes:
+
+| Scope | Description |
+|-------|-------------|
+| **Tenant** | Role applies across all organizations within the tenant |
+| **Organization** | Role applies only within a specific organization |
+
+### Token Claims
+
+When a user authenticates, their effective permissions and roles are included in the access token:
+
+```json
+{
+  "sub": "user-123",
+  "tenant_id": "acme",
+  "permissions": ["project:read", "project:write", "admin:users"],
+  "app_roles": ["editor", "user-admin"]
+}
+```
+
+### Managing via API
+
+Applications can sync their system permissions and roles using Client Credentials Flow:
+
+```
+PUT /api/clients/{clientId}/system/permissions
+PUT /api/clients/{clientId}/system/roles
+```
+
+These endpoints require a CCF token where `sub == client_id`, ensuring only the application itself can modify its system permissions/roles.
+
+### Client Library (TGHarker.Identity.Client)
+
+Use the client library to automatically register permissions and roles on application startup:
+
+```csharp
+services.AddTGHarkerIdentityClient(
+    options => {
+        options.Authority = "https://identity.example.com";
+        options.ClientId = "my-app";
+        options.ClientSecret = "secret";
+        options.TenantId = "tenant-1";
+    },
+    builder => builder
+        .AddPermission("project:read", "Read Projects", "View project data")
+        .AddPermission("project:write", "Write Projects", "Modify project data")
+        .AddPermission("admin:users", "Manage Users", "Create and manage users")
+        .AddRole("viewer", "project:read")
+        .AddRole("editor", "project:read", "project:write")
+        .AddRole("admin", "project:read", "project:write", "admin:users")
+);
+```
+
+The library automatically syncs permissions and roles with the identity server on startup.
+
 ## Configuration
 
 ### Default Token Lifetimes
@@ -203,6 +273,13 @@ Users can set a default organization when selecting one during login by checking
 - PKCE required by default
 - Max 5 login attempts per minute (configurable)
 - Secure password hashing
+
+## Documentation
+
+See the [docs](./docs/) folder for detailed documentation:
+
+- [Application Roles & Permissions](./docs/application-roles-permissions.md) - Fine-grained authorization for applications
+- [Application Roles PRD](./docs/prd-application-roles-permissions.md) - Product requirements document
 
 ## License
 

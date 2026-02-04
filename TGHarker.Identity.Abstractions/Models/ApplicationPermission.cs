@@ -20,4 +20,9 @@ public sealed class ApplicationPermission
     /// Description of what this permission allows.
     /// </summary>
     [Id(2)] public string? Description { get; set; }
+
+    /// <summary>
+    /// Indicates if this is a system-defined permission that can only be modified by the application itself.
+    /// </summary>
+    [Id(3)] public bool IsSystem { get; set; }
 }

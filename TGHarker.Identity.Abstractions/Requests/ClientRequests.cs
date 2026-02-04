@@ -54,3 +54,23 @@ public sealed class AddSecretResult
     [Id(2)] public string? PlainTextSecret { get; set; }
     [Id(3)] public string? Error { get; set; }
 }
+
+[GenerateSerializer]
+public sealed class SyncPermissionsResult
+{
+    [Id(0)] public bool Success { get; set; }
+    [Id(1)] public int Added { get; set; }
+    [Id(2)] public int Updated { get; set; }
+    [Id(3)] public int Removed { get; set; }
+    [Id(4)] public string? Error { get; set; }
+}
+
+[GenerateSerializer]
+public sealed class SyncRolesResult
+{
+    [Id(0)] public bool Success { get; set; }
+    [Id(1)] public int Added { get; set; }
+    [Id(2)] public int Updated { get; set; }
+    [Id(3)] public int Removed { get; set; }
+    [Id(4)] public string? Error { get; set; }
+}

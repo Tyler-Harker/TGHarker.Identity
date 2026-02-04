@@ -65,7 +65,13 @@
                         {
                             <tr>
                                 <td>
-                                    <div class="fw-semibold font-monospace">@permission.Name</div>
+                                    <div class="fw-semibold font-monospace">
+                                        @permission.Name
+                                        @if (permission.IsSystem)
+                                        {
+                                            <span class="badge bg-secondary ms-1">System</span>
+                                        }
+                                    </div>
                                     @if (!string.IsNullOrEmpty(permission.DisplayName))
                                     {
                                         <small class="text-muted">@permission.DisplayName</small>
@@ -82,12 +88,15 @@
                                     }
                                 </td>
                                 <td class="text-end">
-                                    <form method="post" asp-page-handler="Delete" asp-route-clientId="@Model.ClientId" asp-route-name="@permission.Name" class="d-inline">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger"
-                                                onclick="return confirm('Remove this permission? It will also be removed from any roles that use it.')">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </form>
+                                    @if (!permission.IsSystem)
+                                    {
+                                        <form method="post" asp-page-handler="Delete" asp-route-clientId="@Model.ClientId" asp-route-name="@permission.Name" class="d-inline">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                    onclick="return confirm('Remove this permission? It will also be removed from any roles that use it.')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    }
                                 </td>
                             </tr>
                         }

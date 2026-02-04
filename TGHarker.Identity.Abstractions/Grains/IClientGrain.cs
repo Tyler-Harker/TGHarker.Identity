@@ -76,4 +76,17 @@ public interface IClientGrain : IGrainWithStringKey
     /// Sets whether permissions should be included in access tokens.
     /// </summary>
     Task SetIncludePermissionsInTokenAsync(bool include);
+
+    // System Permissions/Roles Management (for application self-registration via CCF)
+    /// <summary>
+    /// Synchronizes system permissions from the application. Adds new ones, updates existing, removes stale.
+    /// Only system permissions are affected; user-created permissions are left untouched.
+    /// </summary>
+    Task<SyncPermissionsResult> SyncSystemPermissionsAsync(IReadOnlyList<ApplicationPermission> permissions);
+
+    /// <summary>
+    /// Synchronizes system roles from the application. Adds new ones, updates existing, removes stale.
+    /// Only system roles are affected; user-created roles are left untouched.
+    /// </summary>
+    Task<SyncRolesResult> SyncSystemRolesAsync(IReadOnlyList<ApplicationRole> roles);
 }

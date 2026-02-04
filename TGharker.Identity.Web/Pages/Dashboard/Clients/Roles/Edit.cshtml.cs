@@ -65,6 +65,13 @@ public class EditModel : PageModel
             return RedirectToPage("./Index", new { clientId });
         }
 
+        // System roles cannot be edited
+        if (role.IsSystem)
+        {
+            TempData["ErrorMessage"] = "System roles cannot be edited. They are managed by the application.";
+            return RedirectToPage("./Index", new { clientId });
+        }
+
         ClientId = clientId;
         ClientName = client.ClientName ?? clientId;
         RoleId = roleId;
@@ -105,6 +112,13 @@ public class EditModel : PageModel
             return RedirectToPage("./Index", new { clientId });
         }
 
+        // System roles cannot be edited
+        if (existingRole.IsSystem)
+        {
+            TempData["ErrorMessage"] = "System roles cannot be edited. They are managed by the application.";
+            return RedirectToPage("./Index", new { clientId });
+        }
+
         ClientId = clientId;
         ClientName = client.ClientName ?? clientId;
         RoleId = roleId;
@@ -120,12 +134,9 @@ public class EditModel : PageModel
 
         try
         {
-            // Don't update name for system roles
-            var nameToUpdate = existingRole.IsSystem ? null : Input.Name?.ToLowerInvariant();
-
             var updatedRole = await clientGrain.UpdateApplicationRoleAsync(
                 roleId,
-                nameToUpdate,
+                Input.Name?.ToLowerInvariant(),
                 Input.DisplayName,
                 Input.Description,
                 Input.SelectedPermissions);

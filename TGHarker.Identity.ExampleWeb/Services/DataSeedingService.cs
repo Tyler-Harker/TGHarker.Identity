@@ -4,23 +4,21 @@ using TGHarker.Identity.Abstractions.Requests;
 
 namespace TGHarker.Identity.ExampleWeb.Services;
 
-public sealed class DataSeedingService : BackgroundService
+/// <summary>
+/// Seeds initial data (user, tenant, client) via Orleans.
+/// Permission/role sync is handled separately by PermissionSyncService via the SDK.
+/// </summary>
+public sealed class DataSeedingService(
+    IClusterClient clusterClient,
+    ClientSecretStore secretStore,
+    ILogger<DataSeedingService> logger) : BackgroundService
 {
-    private readonly IClusterClient _clusterClient;
-    private readonly ILogger<DataSeedingService> _logger;
-
     private const string TestEmail = "test@test.com";
     private const string TestPassword = "Password!23";
     private const string TestTenantIdentifier = "test";
     private const string TestTenantName = "Test";
     private const string TestClientId = "testweb";
     private const string TestClientName = "TestWeb";
-
-    public DataSeedingService(IClusterClient clusterClient, ILogger<DataSeedingService> logger)
-    {
-        _clusterClient = clusterClient;
-        _logger = logger;
-    }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -29,7 +27,7 @@ public sealed class DataSeedingService : BackgroundService
 
         try
         {
-            _logger.LogInformation("Starting data seeding...");
+            logger.LogInformation("Starting data seeding...");
 
             // Step 1: Create user
             var userId = await CreateUserAsync(stoppingToken);
@@ -37,30 +35,33 @@ public sealed class DataSeedingService : BackgroundService
             // Step 2: Create tenant
             await CreateTenantAsync(userId, stoppingToken);
 
-            // Step 3: Create client/application
-            await CreateClientAsync(stoppingToken);
+            // Step 3: Create client/application and get the secret
+            var clientSecret = await CreateClientAndGetSecretAsync(stoppingToken);
 
-            _logger.LogInformation("Data seeding completed successfully!");
+            // Notify the secret store so PermissionSyncService can proceed
+            secretStore.SetSecret(clientSecret);
+
+            logger.LogInformation("Data seeding completed successfully!");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during data seeding");
+            logger.LogError(ex, "Error during data seeding");
         }
     }
 
     private async Task<string> CreateUserAsync(CancellationToken stoppingToken)
     {
-        var userRegistry = _clusterClient.GetGrain<IUserRegistryGrain>("user-registry");
+        var userRegistry = clusterClient.GetGrain<IUserRegistryGrain>("user-registry");
         var existingUserId = await userRegistry.GetUserIdByEmailAsync(TestEmail);
 
         if (!string.IsNullOrEmpty(existingUserId))
         {
-            _logger.LogInformation("User {Email} already exists with ID {UserId}", TestEmail, existingUserId);
+            logger.LogInformation("User {Email} already exists with ID {UserId}", TestEmail, existingUserId);
             return existingUserId;
         }
 
         var userId = Guid.NewGuid().ToString();
-        var userGrain = _clusterClient.GetGrain<IUserGrain>($"user-{userId}");
+        var userGrain = clusterClient.GetGrain<IUserGrain>($"user-{userId}");
 
         var hashedPassword = HashPassword(TestPassword);
 
@@ -84,22 +85,22 @@ public sealed class DataSeedingService : BackgroundService
             throw new InvalidOperationException("Failed to register user in registry");
         }
 
-        _logger.LogInformation("Created user {Email} with ID {UserId}", TestEmail, userId);
+        logger.LogInformation("Created user {Email} with ID {UserId}", TestEmail, userId);
         return userId;
     }
 
     private async Task CreateTenantAsync(string userId, CancellationToken stoppingToken)
     {
-        var tenantRegistry = _clusterClient.GetGrain<ITenantRegistryGrain>("tenant-registry");
+        var tenantRegistry = clusterClient.GetGrain<ITenantRegistryGrain>("tenant-registry");
         var existingTenantId = await tenantRegistry.GetTenantIdByIdentifierAsync(TestTenantIdentifier);
 
         if (!string.IsNullOrEmpty(existingTenantId))
         {
-            _logger.LogInformation("Tenant {Identifier} already exists", TestTenantIdentifier);
+            logger.LogInformation("Tenant {Identifier} already exists", TestTenantIdentifier);
             return;
         }
 
-        var tenantGrain = _clusterClient.GetGrain<ITenantGrain>(TestTenantIdentifier);
+        var tenantGrain = clusterClient.GetGrain<ITenantGrain>(TestTenantIdentifier);
         var result = await tenantGrain.InitializeAsync(new CreateTenantRequest
         {
             Identifier = TestTenantIdentifier,
@@ -119,21 +120,30 @@ public sealed class DataSeedingService : BackgroundService
         await tenantGrain.AddMemberAsync(userId);
 
         // Update user's tenant memberships
-        var userGrain = _clusterClient.GetGrain<IUserGrain>($"user-{userId}");
+        var userGrain = clusterClient.GetGrain<IUserGrain>($"user-{userId}");
         await userGrain.AddTenantMembershipAsync(TestTenantIdentifier);
 
-        _logger.LogInformation("Created tenant {Name} with identifier {Identifier}", TestTenantName, TestTenantIdentifier);
+        logger.LogInformation("Created tenant {Name} with identifier {Identifier}", TestTenantName, TestTenantIdentifier);
     }
 
-    private async Task CreateClientAsync(CancellationToken stoppingToken)
+    private async Task<string> CreateClientAndGetSecretAsync(CancellationToken stoppingToken)
     {
         var clientGrainKey = $"{TestTenantIdentifier}/{TestClientId}";
-        var clientGrain = _clusterClient.GetGrain<IClientGrain>(clientGrainKey);
+        var clientGrain = clusterClient.GetGrain<IClientGrain>(clientGrainKey);
 
         if (await clientGrain.ExistsAsync())
         {
-            _logger.LogInformation("Client {ClientId} already exists", TestClientId);
-            return;
+            logger.LogInformation("Client {ClientId} already exists, creating new secret for sync", TestClientId);
+
+            // Client exists, but we need a fresh secret for the sync service
+            var secretResult = await clientGrain.AddSecretAsync("PermissionSync secret", null);
+            if (!secretResult.Success || string.IsNullOrEmpty(secretResult.PlainTextSecret))
+            {
+                throw new InvalidOperationException($"Failed to create client secret: {secretResult.Error}");
+            }
+
+            logger.LogInformation("Created new client secret for existing client");
+            return secretResult.PlainTextSecret;
         }
 
         var result = await clientGrain.CreateAsync(new CreateClientRequest
@@ -142,7 +152,7 @@ public sealed class DataSeedingService : BackgroundService
             ClientId = TestClientId,
             ClientName = TestClientName,
             Description = "Example web application for testing OAuth2/OIDC flows",
-            IsConfidential = false,
+            IsConfidential = true,  // Confidential client for CCF support
             RequirePkce = true,
             RequireConsent = false,
             RedirectUris =
@@ -160,7 +170,7 @@ public sealed class DataSeedingService : BackgroundService
                 "https://localhost:7200/signout-callback-oidc"
             ],
             AllowedScopes = ["openid", "profile", "email"],
-            AllowedGrantTypes = ["authorization_code", "refresh_token"],
+            AllowedGrantTypes = ["authorization_code", "refresh_token", "client_credentials"],
             CorsOrigins =
             [
                 "http://localhost:5200",
@@ -173,11 +183,22 @@ public sealed class DataSeedingService : BackgroundService
             throw new InvalidOperationException($"Failed to create client: {result.Error}");
         }
 
+        // Add a secret for development
+        var secretResult2 = await clientGrain.AddSecretAsync("Development secret", null);
+        if (!secretResult2.Success || string.IsNullOrEmpty(secretResult2.PlainTextSecret))
+        {
+            throw new InvalidOperationException($"Failed to create client secret: {secretResult2.Error}");
+        }
+
+        logger.LogInformation("Client secret created for new client");
+
         // Register client with tenant
-        var tenantGrain = _clusterClient.GetGrain<ITenantGrain>(TestTenantIdentifier);
+        var tenantGrain = clusterClient.GetGrain<ITenantGrain>(TestTenantIdentifier);
         await tenantGrain.AddClientAsync(TestClientId);
 
-        _logger.LogInformation("Created client {ClientId} for tenant {TenantId}", TestClientId, TestTenantIdentifier);
+        logger.LogInformation("Created confidential client {ClientId} for tenant {TenantId}", TestClientId, TestTenantIdentifier);
+
+        return secretResult2.PlainTextSecret;
     }
 
     private static string HashPassword(string password)

@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\TGHarker.Identity.Abstractions\TGHarker.Identity.Abstractions.csproj" />
+    <ProjectReference Include="..\TGHarker.Identity.Client\TGHarker.Identity.Client.csproj" />
     <ProjectReference Include="..\TGHarker.Identity.ServiceDefaults\TGHarker.Identity.ServiceDefaults.csproj" />
   </ItemGroup>
 

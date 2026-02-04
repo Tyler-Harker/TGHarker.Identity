@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+using TGHarker.Identity.Client;
 using TGHarker.Identity.ExampleWeb.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,8 +12,14 @@ builder.AddServiceDefaults();
 builder.AddKeyedAzureTableServiceClient("clustering");
 builder.UseOrleansClient();
 
-// Register data seeding service
+// Register client secret store (shares secret between DataSeedingService and PermissionSyncService)
+builder.Services.AddSingleton<ClientSecretStore>();
+
+// Register data seeding service (seeds user, tenant, client via Orleans)
 builder.Services.AddHostedService<DataSeedingService>();
+
+// Register permission sync service (syncs permissions/roles via SDK after DataSeedingService sets the secret)
+builder.Services.AddHostedService<PermissionSyncService>();
 
 // Add Razor Pages
 builder.Services.AddRazorPages();
@@ -20,6 +27,57 @@ builder.Services.AddRazorPages();
 // Configure authentication
 var identityUrl = builder.Configuration["Identity:Authority"] ?? "https://localhost:7157";
 var tenantId = builder.Configuration["Identity:TenantId"] ?? "test";
+
+// Configure TGHarker.Identity.Client for application permissions/roles
+// Note: SyncOnStartup is disabled because PermissionSyncService handles sync manually
+// after DataSeedingService creates the client and provides the secret.
+// Permissions and roles defined here are synced to the identity server on startup.
+builder.Services.AddTGHarkerIdentityClient(
+    options =>
+    {
+        options.Authority = identityUrl;
+        options.ClientId = "testweb";
+        options.ClientSecret = "unused"; // Not used - PermissionSyncService gets secret from ClientSecretStore
+        options.TenantId = tenantId;
+        options.SyncOnStartup = true; // Disabled - PermissionSyncService handles sync
+    },
+    permissions =>
+    {
+        // Define application permissions - these are synced via SDK on startup
+        permissions
+            .AddPermission("dashboard:view", "View Dashboard", "Access the main dashboard")
+            .AddPermission("reports:read", "Read Reports", "View reports and analytics")
+            .AddPermission("reports:export", "Export Reports", "Export reports to PDF/CSV")
+            .AddPermission("settings:read", "View Settings", "View application settings")
+            .AddPermission("settings:write", "Modify Settings", "Change application settings")
+            .AddPermission("users:read", "View Users", "View user list and profiles")
+            .AddPermission("users:invite", "Invite Users", "Invite new users to the application");
+
+        // Define application roles with full metadata
+        permissions
+            .AddRole(new Role("viewer")
+            {
+                Id = "role-viewer",
+                DisplayName = "Viewer",
+                Description = "Can view dashboard and reports",
+                Permissions = ["dashboard:view", "reports:read"]
+            })
+            .AddRole(new Role("analyst")
+            {
+                Id = "role-analyst",
+                DisplayName = "Analyst",
+                Description = "Can view and export reports",
+                Permissions = ["dashboard:view", "reports:read", "reports:export"]
+            })
+            .AddRole(new Role("admin")
+            {
+                Id = "role-admin",
+                DisplayName = "Administrator",
+                Description = "Full access to all features",
+                Permissions = ["dashboard:view", "reports:read", "reports:export",
+                               "settings:read", "settings:write", "users:read", "users:invite"]
+            });
+    });
 
 builder.Services.AddAuthentication(options =>
 {

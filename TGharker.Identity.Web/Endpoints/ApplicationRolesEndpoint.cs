@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using TGHarker.Identity.Abstractions.Grains;
 using TGHarker.Identity.Abstractions.Models;
+using TGHarker.Identity.Abstractions.Requests;
 
 namespace TGharker.Identity.Web.Endpoints;
 
@@ -80,6 +81,21 @@ public static class ApplicationRolesEndpoint
                 .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
                 .RequireAuthenticatedUser())
             .WithName("RemoveUserApplicationRole")
+            .WithTags("Application Roles");
+
+        // System permissions/roles sync (for application self-registration via CCF)
+        endpoints.MapPut("/api/clients/{clientId}/system/permissions", SyncSystemPermissionsAsync)
+            .RequireAuthorization(policy => policy
+                .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
+                .RequireAuthenticatedUser())
+            .WithName("SyncSystemPermissions")
+            .WithTags("Application Roles");
+
+        endpoints.MapPut("/api/clients/{clientId}/system/roles", SyncSystemRolesAsync)
+            .RequireAuthorization(policy => policy
+                .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
+                .RequireAuthenticatedUser())
+            .WithName("SyncSystemRoles")
             .WithTags("Application Roles");
 
         // Tenant-prefixed routes
@@ -649,6 +665,99 @@ public static class ApplicationRolesEndpoint
 
     #endregion
 
+    #region System Sync Endpoints (CCF)
+
+    private static async Task<IResult> SyncSystemPermissionsAsync(
+        string clientId,
+        SyncPermissionsRequest request,
+        HttpContext context,
+        IClusterClient clusterClient)
+    {
+        var tenantId = context.User.FindFirst("tenant_id")?.Value;
+        if (string.IsNullOrEmpty(tenantId))
+            return Results.Unauthorized();
+
+        // Validate caller is the application itself (CCF token)
+        if (!IsCallerTheApplication(context, clientId))
+            return Results.Forbid();
+
+        var clientGrain = clusterClient.GetGrain<IClientGrain>($"{tenantId}/{clientId}");
+        if (!await clientGrain.ExistsAsync())
+            return Results.NotFound(new { error = "client_not_found" });
+
+        // Convert request permissions to ApplicationPermission with IsSystem = true
+        var permissions = request.Permissions.Select(p => new ApplicationPermission
+        {
+            Name = p.Name,
+            DisplayName = p.DisplayName,
+            Description = p.Description,
+            IsSystem = true
+        }).ToList();
+
+        var result = await clientGrain.SyncSystemPermissionsAsync(permissions);
+
+        if (!result.Success)
+            return Results.BadRequest(new { error = "sync_failed", error_description = result.Error });
+
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> SyncSystemRolesAsync(
+        string clientId,
+        SyncRolesRequest request,
+        HttpContext context,
+        IClusterClient clusterClient)
+    {
+        var tenantId = context.User.FindFirst("tenant_id")?.Value;
+        if (string.IsNullOrEmpty(tenantId))
+            return Results.Unauthorized();
+
+        // Validate caller is the application itself (CCF token)
+        if (!IsCallerTheApplication(context, clientId))
+            return Results.Forbid();
+
+        var clientGrain = clusterClient.GetGrain<IClientGrain>($"{tenantId}/{clientId}");
+        if (!await clientGrain.ExistsAsync())
+            return Results.NotFound(new { error = "client_not_found" });
+
+        // Convert request roles to ApplicationRole with IsSystem = true
+        var roles = request.Roles.Select(r => new ApplicationRole
+        {
+            Id = r.Id ?? Guid.NewGuid().ToString("N")[..12],
+            Name = r.Name,
+            DisplayName = r.DisplayName,
+            Description = r.Description,
+            Permissions = r.Permissions?.ToList() ?? [],
+            IsSystem = true,
+            CreatedAt = DateTime.UtcNow
+        }).ToList();
+
+        var result = await clientGrain.SyncSystemRolesAsync(roles);
+
+        if (!result.Success)
+            return Results.BadRequest(new { error = "sync_failed", error_description = result.Error });
+
+        return Results.Ok(result);
+    }
+
+    /// <summary>
+    /// Validates that the caller is the application itself via Client Credentials Flow.
+    /// In CCF tokens, both 'sub' and 'client_id' claims equal the client ID.
+    /// </summary>
+    private static bool IsCallerTheApplication(HttpContext context, string clientId)
+    {
+        var sub = context.User.FindFirst("sub")?.Value;
+        var tokenClientId = context.User.FindFirst("client_id")?.Value;
+
+        // In CCF, sub == client_id and both should match the route clientId
+        return !string.IsNullOrEmpty(sub) &&
+               !string.IsNullOrEmpty(tokenClientId) &&
+               sub == tokenClientId &&
+               sub == clientId;
+    }
+
+    #endregion
+
     #region Helpers
 
     private static async Task<bool> IsAdminAsync(HttpContext context, IClusterClient clusterClient, string tenantId)
@@ -739,6 +848,48 @@ public sealed class UserApplicationRolesResponse
 {
     [JsonPropertyName("assignments")]
     public List<ApplicationRoleAssignment> Assignments { get; set; } = [];
+}
+
+public sealed class SyncPermissionsRequest
+{
+    [JsonPropertyName("permissions")]
+    public List<SyncPermissionItem> Permissions { get; set; } = [];
+}
+
+public sealed class SyncPermissionItem
+{
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("display_name")]
+    public string? DisplayName { get; set; }
+
+    [JsonPropertyName("description")]
+    public string? Description { get; set; }
+}
+
+public sealed class SyncRolesRequest
+{
+    [JsonPropertyName("roles")]
+    public List<SyncRoleItem> Roles { get; set; } = [];
+}
+
+public sealed class SyncRoleItem
+{
+    [JsonPropertyName("id")]
+    public string? Id { get; set; }
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("display_name")]
+    public string? DisplayName { get; set; }
+
+    [JsonPropertyName("description")]
+    public string? Description { get; set; }
+
+    [JsonPropertyName("permissions")]
+    public string[]? Permissions { get; set; }
 }
 
 #endregion

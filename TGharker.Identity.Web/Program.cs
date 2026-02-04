@@ -326,9 +326,11 @@ app.MapUserInfoEndpoint();
 app.MapRevocationEndpoint();
 app.MapIntrospectionEndpoint();
 app.MapEndSessionEndpoint();
+app.MapOrganizationsEndpoint();
 app.MapTenantEndpoints();
 app.MapStatsEndpoint();
 app.MapThemeEndpoint();
+app.MapApplicationRolesEndpoints();
 
 // Map Razor Pages
 app.MapStaticAssets();

@@ -183,7 +183,7 @@ public static class TokenEndpoint
 
         // Build identity claims based on scopes
         var identityClaims = await BuildIdentityClaimsAsync(user, membership, authCode.Scopes, clusterClient, tenant.Id, authCode.SelectedOrganizationId);
-        var additionalClaims = await BuildResourceClaimsAsync(user, membership, authCode.Scopes);
+        var additionalClaims = await BuildResourceClaimsAsync(user, membership, authCode.Scopes, clusterClient, tenant.Id, client.ClientId, authCode.SelectedOrganizationId);
 
         var tokenContext = new TokenGenerationContext
         {
@@ -332,7 +332,7 @@ public static class TokenEndpoint
                 // For refresh tokens, use the default organization since we don't store selected org in refresh token
                 var selectedOrgId = membership?.DefaultOrganizationId;
                 identityClaims = await BuildIdentityClaimsAsync(user, membership, scopes, clusterClient, tenant.Id, selectedOrgId);
-                additionalClaims = await BuildResourceClaimsAsync(user, membership, scopes);
+                additionalClaims = await BuildResourceClaimsAsync(user, membership, scopes, clusterClient, tenant.Id, client.ClientId, selectedOrgId);
             }
         }
 
@@ -495,10 +495,14 @@ public static class TokenEndpoint
         return claims;
     }
 
-    private static Task<Dictionary<string, string>> BuildResourceClaimsAsync(
+    private static async Task<Dictionary<string, string>> BuildResourceClaimsAsync(
         UserState user,
         TenantMembershipState? membership,
-        IReadOnlyList<string> scopes)
+        IReadOnlyList<string> scopes,
+        IClusterClient clusterClient,
+        string tenantId,
+        string clientId,
+        string? organizationId)
     {
         var claims = new Dictionary<string, string>();
 
@@ -517,7 +521,34 @@ public static class TokenEndpoint
             }
         }
 
-        return Task.FromResult(claims);
+        // Add application-scoped permissions and roles
+        var clientGrain = clusterClient.GetGrain<IClientGrain>($"{tenantId}/{clientId}");
+        var clientState = await clientGrain.GetStateAsync();
+
+        if (clientState?.IncludePermissionsInToken == true)
+        {
+            var userAppRolesGrain = clusterClient.GetGrain<IUserApplicationRolesGrain>(
+                $"{tenantId}/client-{clientId}/user-{user.Id}");
+
+            if (await userAppRolesGrain.ExistsAsync())
+            {
+                // Get effective roles for the current context
+                var appRoles = await userAppRolesGrain.GetEffectiveRolesAsync(organizationId);
+                if (appRoles.Count > 0)
+                {
+                    claims["app_roles"] = JsonSerializer.Serialize(appRoles, AppRolesJsonContext.Default.IReadOnlyListString);
+                }
+
+                // Get effective permissions for the current context
+                var permissions = await userAppRolesGrain.GetEffectivePermissionsAsync(organizationId);
+                if (permissions.Count > 0)
+                {
+                    claims["permissions"] = JsonSerializer.Serialize(permissions, AppRolesJsonContext.Default.IReadOnlySetString);
+                }
+            }
+        }
+
+        return claims;
     }
 
 }
@@ -582,5 +613,11 @@ public sealed class OrganizationClaimValue
 [JsonSerializable(typeof(List<OrganizationClaimValue>))]
 [JsonSerializable(typeof(OrganizationClaimValue))]
 internal partial class OrganizationClaimJsonContext : JsonSerializerContext
+{
+}
+
+[JsonSerializable(typeof(IReadOnlyList<string>))]
+[JsonSerializable(typeof(IReadOnlySet<string>))]
+internal partial class AppRolesJsonContext : JsonSerializerContext
 {
 }

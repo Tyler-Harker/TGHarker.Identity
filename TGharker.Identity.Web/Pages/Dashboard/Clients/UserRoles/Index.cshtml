@@ -1,0 +1,138 @@
+@page "/Dashboard/Clients/{clientId}/UserRoles"
+@using TGHarker.Identity.Abstractions.Models
+@model TGharker.Identity.Web.Pages.Dashboard.Clients.UserRoles.IndexModel
+@{
+    ViewData["Title"] = "User Role Assignments";
+}
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-page="../Index">Applications</a></li>
+        <li class="breadcrumb-item"><a asp-page="../Details" asp-route-id="@Model.ClientId">@Model.ClientName</a></li>
+        <li class="breadcrumb-item active">User Roles</li>
+    </ol>
+</nav>
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">User Role Assignments</h2>
+        <p class="text-muted mb-0">Manage which users have which application roles.</p>
+    </div>
+    <a asp-page="./Assign" asp-route-clientId="@Model.ClientId" class="btn btn-primary">
+        <i class="bi bi-person-plus me-1"></i> Assign Role
+    </a>
+</div>
+
+<div class="card dashboard-card">
+    <div class="card-body p-0">
+        @if (Model.UserAssignments.Count == 0)
+        {
+            <div class="empty-state">
+                <i class="bi bi-people"></i>
+                <h5>No role assignments</h5>
+                <p class="mb-0">Assign application roles to users to grant them permissions.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-dashboard table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Roles</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var assignment in Model.UserAssignments)
+                        {
+                            <tr class="cursor-pointer" onclick="window.location='@Url.Page("./Assign", new { clientId = Model.ClientId, userId = assignment.UserId })'">
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-sm bg-primary text-white rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                                            <i class="bi bi-person"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-semibold">@assignment.UserName</div>
+                                            <small class="text-muted">@assignment.UserEmail</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    @if (assignment.Assignments.Count == 0)
+                                    {
+                                        <small class="text-muted fst-italic">No roles assigned</small>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var role in assignment.Assignments.Take(3))
+                                        {
+                                            var scopeBadge = role.Scope == ApplicationRoleScope.Organization ? "bg-info" : "bg-primary";
+                                            <span class="badge @scopeBadge me-1 mb-1">
+                                                @(Model.RoleNames.GetValueOrDefault(role.RoleId, role.RoleId))
+                                                @if (role.Scope == ApplicationRoleScope.Organization)
+                                                {
+                                                    <small>(org)</small>
+                                                }
+                                            </span>
+                                        }
+                                        @if (assignment.Assignments.Count > 3)
+                                        {
+                                            <span class="badge bg-light text-dark mb-1">+@(assignment.Assignments.Count - 3) more</span>
+                                        }
+                                    }
+                                </td>
+                                <td class="text-end" onclick="event.stopPropagation()">
+                                    <a asp-page="./Assign" asp-route-clientId="@Model.ClientId" asp-route-userId="@assignment.UserId"
+                                       class="btn btn-sm btn-outline-secondary">
+                                        <i class="bi bi-pencil"></i> Manage
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card-footer d-flex justify-content-between align-items-center">
+                <small class="text-muted">Showing @Model.UserAssignments.Count of @Model.TotalCount users with assignments</small>
+                @if (Model.TotalPages > 1)
+                {
+                    <nav>
+                        <ul class="pagination pagination-sm mb-0">
+                            <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
+                                <a class="page-link" asp-page="./Index" asp-route-clientId="@Model.ClientId" asp-route-pageNumber="@(Model.PageNumber - 1)">Previous</a>
+                            </li>
+                            @for (var i = 1; i <= Model.TotalPages; i++)
+                            {
+                                <li class="page-item @(i == Model.PageNumber ? "active" : "")">
+                                    <a class="page-link" asp-page="./Index" asp-route-clientId="@Model.ClientId" asp-route-pageNumber="@i">@i</a>
+                                </li>
+                            }
+                            <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
+                                <a class="page-link" asp-page="./Index" asp-route-clientId="@Model.ClientId" asp-route-pageNumber="@(Model.PageNumber + 1)">Next</a>
+                            </li>
+                        </ul>
+                    </nav>
+                }
+            </div>
+        }
+    </div>
+</div>

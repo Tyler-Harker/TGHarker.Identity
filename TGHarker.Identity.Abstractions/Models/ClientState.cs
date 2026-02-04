@@ -37,6 +37,26 @@ public sealed class ClientState
     [Id(17)] public DateTime CreatedAt { get; set; }
     [Id(18)] public List<string> PostLogoutRedirectUris { get; set; } = [];
     [Id(19)] public UserFlowSettings UserFlow { get; set; } = new();
+
+    /// <summary>
+    /// Application-defined permissions that can be assigned via roles.
+    /// </summary>
+    [Id(20)] public List<ApplicationPermission> ApplicationPermissions { get; set; } = [];
+
+    /// <summary>
+    /// Application-defined roles containing sets of permissions.
+    /// </summary>
+    [Id(21)] public List<ApplicationRole> ApplicationRoles { get; set; } = [];
+
+    /// <summary>
+    /// Whether to include application permissions in access tokens.
+    /// </summary>
+    [Id(22)] public bool IncludePermissionsInToken { get; set; } = true;
+
+    /// <summary>
+    /// The default role ID to assign to new users. Null means no default role.
+    /// </summary>
+    [Id(23)] public string? DefaultApplicationRoleId { get; set; }
 }
 
 [GenerateSerializer]

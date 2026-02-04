@@ -205,6 +205,66 @@
                 </div>
             </div>
         </div>
+
+        <!-- Application Roles & Permissions -->
+        <div class="card dashboard-card mt-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Application Roles & Permissions</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">
+                    Define permissions and roles specific to this application. Users can be assigned these roles
+                    to control what they can do within your application.
+                </p>
+
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="border rounded p-3 text-center h-100">
+                            <i class="bi bi-shield-lock fs-3 text-primary mb-2 d-block"></i>
+                            <h6 class="mb-1">@Model.Client.ApplicationPermissions.Count Permissions</h6>
+                            <p class="small text-muted mb-2">Define what actions are possible</p>
+                            <a asp-page="./Permissions/Index" asp-route-clientId="@Model.Client.ClientId" class="btn btn-sm btn-outline-primary">
+                                Manage
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="border rounded p-3 text-center h-100">
+                            <i class="bi bi-person-badge fs-3 text-primary mb-2 d-block"></i>
+                            <h6 class="mb-1">@Model.Client.ApplicationRoles.Count Roles</h6>
+                            <p class="small text-muted mb-2">Group permissions into roles</p>
+                            <a asp-page="./Roles/Index" asp-route-clientId="@Model.Client.ClientId" class="btn btn-sm btn-outline-primary">
+                                Manage
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="border rounded p-3 text-center h-100">
+                            <i class="bi bi-people fs-3 text-primary mb-2 d-block"></i>
+                            <h6 class="mb-1">User Assignments</h6>
+                            <p class="small text-muted mb-2">Assign roles to users</p>
+                            <a asp-page="./UserRoles/Index" asp-route-clientId="@Model.Client.ClientId" class="btn btn-sm btn-outline-primary">
+                                Manage
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-3 pt-3 border-top">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="includePermissionsToggle"
+                               checked="@Model.Client.IncludePermissionsInToken" disabled>
+                        <label class="form-check-label" for="includePermissionsToggle">
+                            Include permissions in access tokens
+                        </label>
+                    </div>
+                    <small class="text-muted">
+                        When enabled, resolved permissions are included in the <code>permissions</code> claim.
+                        <a asp-page="./Edit" asp-route-id="@Model.Client.ClientId">Edit settings</a>
+                    </small>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="col-lg-4">

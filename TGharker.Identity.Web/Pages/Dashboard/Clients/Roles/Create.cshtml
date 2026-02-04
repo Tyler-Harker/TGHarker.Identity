@@ -1,0 +1,107 @@
+@page "/Dashboard/Clients/{clientId}/Roles/Create"
+@using TGHarker.Identity.Abstractions.Models
+@model TGharker.Identity.Web.Pages.Dashboard.Clients.Roles.CreateModel
+@{
+    ViewData["Title"] = "Create Role";
+}
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-page="../Index">Applications</a></li>
+        <li class="breadcrumb-item"><a asp-page="../Details" asp-route-id="@Model.ClientId">@Model.ClientName</a></li>
+        <li class="breadcrumb-item"><a asp-page="./Index" asp-route-clientId="@Model.ClientId">Roles</a></li>
+        <li class="breadcrumb-item active">Create</li>
+    </ol>
+</nav>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card dashboard-card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Create Application Role</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" asp-route-clientId="@Model.ClientId">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="Input.Name" class="form-label">Role Name <span class="text-danger">*</span></label>
+                        <input asp-for="Input.Name" class="form-control" placeholder="e.g., admin, editor, viewer" />
+                        <span asp-validation-for="Input.Name" class="text-danger"></span>
+                        <div class="form-text">A short identifier for this role (lowercase, no spaces).</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Input.DisplayName" class="form-label">Display Name</label>
+                        <input asp-for="Input.DisplayName" class="form-control" placeholder="e.g., Administrator" />
+                        <span asp-validation-for="Input.DisplayName" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Input.Description" class="form-label">Description</label>
+                        <textarea asp-for="Input.Description" class="form-control" rows="2" placeholder="Describe what this role allows users to do"></textarea>
+                        <span asp-validation-for="Input.Description" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label">Permissions</label>
+                        @if (Model.AvailablePermissions.Count == 0)
+                        {
+                            <div class="alert alert-info mb-0">
+                                <i class="bi bi-info-circle me-2"></i>
+                                No permissions defined yet.
+                                <a asp-page="../Permissions/Index" asp-route-clientId="@Model.ClientId">Add permissions</a> first.
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
+                                @foreach (var permission in Model.AvailablePermissions)
+                                {
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" name="Input.SelectedPermissions"
+                                               value="@permission.Name" id="perm_@permission.Name.Replace(":", "_")">
+                                        <label class="form-check-label" for="perm_@permission.Name.Replace(":", "_")">
+                                            <code>@permission.Name</code>
+                                            @if (!string.IsNullOrEmpty(permission.DisplayName))
+                                            {
+                                                <span class="text-muted ms-2">- @permission.DisplayName</span>
+                                            }
+                                        </label>
+                                        @if (!string.IsNullOrEmpty(permission.Description))
+                                        {
+                                            <div class="small text-muted ms-4">@permission.Description</div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">Create Role</button>
+                        <a asp-page="./Index" asp-route-clientId="@Model.ClientId" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card dashboard-card">
+            <div class="card-header">
+                <h6 class="card-title mb-0"><i class="bi bi-lightbulb me-2"></i>About Roles</h6>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted">
+                    Roles group permissions together for easier management. Instead of assigning
+                    individual permissions to users, you assign roles.
+                </p>
+                <p class="small text-muted mb-0">
+                    When a user authenticates, their assigned roles are resolved to permissions,
+                    which are included in the access token for your application to enforce.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>

@@ -290,6 +290,166 @@ public sealed class ClientGrain : Grain, IClientGrain
         return Task.FromResult(_state.State.UserFlow ?? new UserFlowSettings());
     }
 
+    #region Application Permissions
+
+    public async Task<ApplicationPermission> AddPermissionAsync(string name, string? displayName, string? description)
+    {
+        // Check if permission already exists
+        var existing = _state.State.ApplicationPermissions.FirstOrDefault(p => p.Name == name);
+        if (existing != null)
+        {
+            // Update existing permission
+            existing.DisplayName = displayName;
+            existing.Description = description;
+            await _state.WriteStateAsync();
+            return existing;
+        }
+
+        var permission = new ApplicationPermission
+        {
+            Name = name,
+            DisplayName = displayName,
+            Description = description
+        };
+
+        _state.State.ApplicationPermissions.Add(permission);
+        await _state.WriteStateAsync();
+        return permission;
+    }
+
+    public async Task<bool> RemovePermissionAsync(string name)
+    {
+        var removed = _state.State.ApplicationPermissions.RemoveAll(p => p.Name == name) > 0;
+        if (removed)
+        {
+            // Also remove the permission from all roles that have it
+            foreach (var role in _state.State.ApplicationRoles)
+            {
+                role.Permissions.Remove(name);
+            }
+            await _state.WriteStateAsync();
+        }
+        return removed;
+    }
+
+    public Task<IReadOnlyList<ApplicationPermission>> GetApplicationPermissionsAsync()
+    {
+        return Task.FromResult<IReadOnlyList<ApplicationPermission>>(_state.State.ApplicationPermissions);
+    }
+
+    #endregion
+
+    #region Application Roles
+
+    public async Task<ApplicationRole> CreateApplicationRoleAsync(string name, string? displayName, string? description, List<string> permissions)
+    {
+        // Validate that all permissions exist
+        var validPermissionNames = _state.State.ApplicationPermissions.Select(p => p.Name).ToHashSet();
+        var invalidPermissions = permissions.Where(p => !validPermissionNames.Contains(p)).ToList();
+        if (invalidPermissions.Count > 0)
+        {
+            throw new ArgumentException($"Unknown permissions: {string.Join(", ", invalidPermissions)}");
+        }
+
+        var role = new ApplicationRole
+        {
+            Id = Guid.NewGuid().ToString(),
+            Name = name,
+            DisplayName = displayName,
+            Description = description,
+            IsSystem = false,
+            Permissions = permissions.ToList(),
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _state.State.ApplicationRoles.Add(role);
+        await _state.WriteStateAsync();
+        return role;
+    }
+
+    public async Task<ApplicationRole?> UpdateApplicationRoleAsync(string roleId, string? name, string? displayName, string? description, List<string>? permissions)
+    {
+        var role = _state.State.ApplicationRoles.FirstOrDefault(r => r.Id == roleId);
+        if (role == null)
+            return null;
+
+        if (name != null)
+            role.Name = name;
+
+        if (displayName != null)
+            role.DisplayName = displayName;
+
+        if (description != null)
+            role.Description = description;
+
+        if (permissions != null)
+        {
+            // Validate that all permissions exist
+            var validPermissionNames = _state.State.ApplicationPermissions.Select(p => p.Name).ToHashSet();
+            var invalidPermissions = permissions.Where(p => !validPermissionNames.Contains(p)).ToList();
+            if (invalidPermissions.Count > 0)
+            {
+                throw new ArgumentException($"Unknown permissions: {string.Join(", ", invalidPermissions)}");
+            }
+            role.Permissions = permissions.ToList();
+        }
+
+        await _state.WriteStateAsync();
+        return role;
+    }
+
+    public async Task<bool> DeleteApplicationRoleAsync(string roleId)
+    {
+        var role = _state.State.ApplicationRoles.FirstOrDefault(r => r.Id == roleId);
+        if (role == null)
+            return false;
+
+        if (role.IsSystem)
+            return false; // Cannot delete system roles
+
+        // Clear default role if deleting the default
+        if (_state.State.DefaultApplicationRoleId == roleId)
+        {
+            _state.State.DefaultApplicationRoleId = null;
+        }
+
+        _state.State.ApplicationRoles.Remove(role);
+        await _state.WriteStateAsync();
+        return true;
+    }
+
+    public Task<IReadOnlyList<ApplicationRole>> GetApplicationRolesAsync()
+    {
+        return Task.FromResult<IReadOnlyList<ApplicationRole>>(_state.State.ApplicationRoles);
+    }
+
+    public Task<ApplicationRole?> GetApplicationRoleAsync(string roleId)
+    {
+        return Task.FromResult(_state.State.ApplicationRoles.FirstOrDefault(r => r.Id == roleId));
+    }
+
+    public async Task SetDefaultApplicationRoleAsync(string? roleId)
+    {
+        if (roleId != null)
+        {
+            // Validate role exists
+            var role = _state.State.ApplicationRoles.FirstOrDefault(r => r.Id == roleId);
+            if (role == null)
+                throw new ArgumentException($"Role not found: {roleId}");
+        }
+
+        _state.State.DefaultApplicationRoleId = roleId;
+        await _state.WriteStateAsync();
+    }
+
+    public async Task SetIncludePermissionsInTokenAsync(bool include)
+    {
+        _state.State.IncludePermissionsInToken = include;
+        await _state.WriteStateAsync();
+    }
+
+    #endregion
+
     private static string GenerateClientSecret()
     {
         var bytes = RandomNumberGenerator.GetBytes(32);

@@ -1,0 +1,260 @@
+@page "/Dashboard/Clients/{clientId}/UserRoles/Assign"
+@using TGHarker.Identity.Abstractions.Models
+@model TGharker.Identity.Web.Pages.Dashboard.Clients.UserRoles.AssignModel
+@{
+    ViewData["Title"] = Model.SelectedUser != null ? $"Manage Roles - {Model.SelectedUser.UserName}" : "Assign Role";
+}
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-page="../Index">Applications</a></li>
+        <li class="breadcrumb-item"><a asp-page="../Details" asp-route-id="@Model.ClientId">@Model.ClientName</a></li>
+        <li class="breadcrumb-item"><a asp-page="./Index" asp-route-clientId="@Model.ClientId">User Roles</a></li>
+        <li class="breadcrumb-item active">@(Model.SelectedUser != null ? "Manage" : "Assign")</li>
+    </ol>
+</nav>
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="row">
+    <div class="col-lg-8">
+        @if (Model.SelectedUser == null)
+        {
+            <!-- User Selection -->
+            <div class="card dashboard-card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Select User</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="mb-3">
+                        <input type="hidden" name="clientId" value="@Model.ClientId" />
+                        <div class="input-group">
+                            <input type="text" class="form-control" name="search" value="@Model.SearchQuery"
+                                   placeholder="Search by name or email..." />
+                            <button type="submit" class="btn btn-outline-secondary">
+                                <i class="bi bi-search"></i>
+                            </button>
+                        </div>
+                    </form>
+
+                    @if (Model.AvailableUsers.Count == 0)
+                    {
+                        <p class="text-muted mb-0">
+                            @if (string.IsNullOrEmpty(Model.SearchQuery))
+                            {
+                                <text>Enter a search term to find users.</text>
+                            }
+                            else
+                            {
+                                <text>No users found matching "@Model.SearchQuery".</text>
+                            }
+                        </p>
+                    }
+                    else
+                    {
+                        <div class="list-group">
+                            @foreach (var user in Model.AvailableUsers)
+                            {
+                                <a asp-page="./Assign" asp-route-clientId="@Model.ClientId" asp-route-userId="@user.UserId"
+                                   class="list-group-item list-group-item-action d-flex align-items-center">
+                                    <div class="avatar-sm bg-primary text-white rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                                        <i class="bi bi-person"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-semibold">@user.UserName</div>
+                                        <small class="text-muted">@user.UserEmail</small>
+                                    </div>
+                                </a>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+        else
+        {
+            <!-- User Role Management -->
+            <div class="card dashboard-card mb-4">
+                <div class="card-header">
+                    <div class="d-flex align-items-center">
+                        <div class="avatar-sm bg-primary text-white rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                            <i class="bi bi-person"></i>
+                        </div>
+                        <div>
+                            <h5 class="card-title mb-0">@Model.SelectedUser.UserName</h5>
+                            <small class="text-muted">@Model.SelectedUser.UserEmail</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <h6 class="mb-3">Current Role Assignments</h6>
+
+                    @if (Model.CurrentAssignments.Count == 0)
+                    {
+                        <p class="text-muted">No roles assigned to this user for this application.</p>
+                    }
+                    else
+                    {
+                        <div class="table-responsive mb-3">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Role</th>
+                                        <th>Scope</th>
+                                        <th>Assigned</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var assignment in Model.CurrentAssignments)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <span class="fw-semibold">@(Model.RoleNames.GetValueOrDefault(assignment.RoleId, assignment.RoleId))</span>
+                                            </td>
+                                            <td>
+                                                @if (assignment.Scope == ApplicationRoleScope.Tenant)
+                                                {
+                                                    <span class="badge bg-primary">Tenant-wide</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-info">
+                                                        Org: @(Model.OrganizationNames.GetValueOrDefault(assignment.OrganizationId ?? "", assignment.OrganizationId ?? ""))
+                                                    </span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">@assignment.AssignedAt.ToString("MMM d, yyyy")</small>
+                                            </td>
+                                            <td class="text-end">
+                                                <form method="post" asp-page-handler="Remove" asp-route-clientId="@Model.ClientId"
+                                                      asp-route-userId="@Model.SelectedUser.UserId" asp-route-roleId="@assignment.RoleId"
+                                                      asp-route-organizationId="@assignment.OrganizationId" class="d-inline">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                            onclick="return confirm('Remove this role assignment?')">
+                                                        <i class="bi bi-x-lg"></i>
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+
+                    <hr />
+
+                    <h6 class="mb-3">Assign New Role</h6>
+
+                    @if (Model.AvailableRoles.Count == 0)
+                    {
+                        <div class="alert alert-info mb-0">
+                            <i class="bi bi-info-circle me-2"></i>
+                            No roles defined for this application.
+                            <a asp-page="../Roles/Create" asp-route-clientId="@Model.ClientId">Create a role</a> first.
+                        </div>
+                    }
+                    else
+                    {
+                        <form method="post" asp-page-handler="Assign" asp-route-clientId="@Model.ClientId" asp-route-userId="@Model.SelectedUser.UserId">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Role <span class="text-danger">*</span></label>
+                                    <select name="roleId" class="form-select" required>
+                                        <option value="">Select a role...</option>
+                                        @foreach (var role in Model.AvailableRoles)
+                                        {
+                                            <option value="@role.Id">@(role.DisplayName ?? role.Name)</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Scope <span class="text-danger">*</span></label>
+                                    <select name="scope" class="form-select" id="scopeSelect" required onchange="toggleOrgSelect()">
+                                        <option value="@((int)ApplicationRoleScope.Tenant)">Tenant-wide</option>
+                                        <option value="@((int)ApplicationRoleScope.Organization)">Organization-specific</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4" id="orgSelectContainer" style="display: none;">
+                                    <label class="form-label">Organization</label>
+                                    <select name="organizationId" class="form-select" id="orgSelect">
+                                        <option value="">Select organization...</option>
+                                        @foreach (var org in Model.UserOrganizations)
+                                        {
+                                            <option value="@org.Key">@org.Value</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-plus-lg me-1"></i> Assign Role
+                                </button>
+                            </div>
+                        </form>
+                    }
+                </div>
+            </div>
+
+            <a asp-page="./Index" asp-route-clientId="@Model.ClientId" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Back to User Roles
+            </a>
+        }
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card dashboard-card">
+            <div class="card-header">
+                <h6 class="card-title mb-0"><i class="bi bi-lightbulb me-2"></i>About Role Scopes</h6>
+            </div>
+            <div class="card-body">
+                <h6 class="small fw-semibold">Tenant-wide</h6>
+                <p class="small text-muted">
+                    The role applies across all organizations. The user will have these permissions
+                    regardless of which organization context they're operating in.
+                </p>
+
+                <h6 class="small fw-semibold">Organization-specific</h6>
+                <p class="small text-muted mb-0">
+                    The role only applies within a specific organization. The user will only have
+                    these permissions when operating within that organization's context.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function toggleOrgSelect() {
+            var scopeSelect = document.getElementById('scopeSelect');
+            var orgContainer = document.getElementById('orgSelectContainer');
+            var orgSelect = document.getElementById('orgSelect');
+
+            if (scopeSelect.value === '@((int)ApplicationRoleScope.Organization)') {
+                orgContainer.style.display = 'block';
+                orgSelect.required = true;
+            } else {
+                orgContainer.style.display = 'none';
+                orgSelect.required = false;
+                orgSelect.value = '';
+            }
+        }
+    </script>
+}

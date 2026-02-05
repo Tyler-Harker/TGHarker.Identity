@@ -36,17 +36,42 @@ public class OAuthCorsMiddleware
     {
         var path = context.Request.Path.Value ?? string.Empty;
         var origin = context.Request.Headers.Origin.FirstOrDefault();
+        var isOAuthPath = IsOAuthPath(path);
+        var isDiscoveryPath = IsDiscoveryPath(path);
+
+        // Diagnostic logging for OAuth endpoints
+        if (isOAuthPath || isDiscoveryPath)
+        {
+            _logger.LogInformation(
+                "[CORS Diagnostics] Request to {Path} | Method: {Method} | Origin: {Origin} | Has-Origin-Header: {HasOrigin}",
+                path,
+                context.Request.Method,
+                origin ?? "(null)",
+                !string.IsNullOrEmpty(origin));
+
+            // Log all request headers for debugging
+            var headers = string.Join(", ", context.Request.Headers.Select(h => $"{h.Key}={h.Value}"));
+            _logger.LogDebug("[CORS Diagnostics] All headers: {Headers}", headers);
+        }
 
         // Skip if not a CORS request
         if (string.IsNullOrEmpty(origin))
         {
+            if (isOAuthPath || isDiscoveryPath)
+            {
+                _logger.LogWarning(
+                    "[CORS Diagnostics] No Origin header present for {Path} - skipping CORS handling. " +
+                    "This may indicate the header was stripped by a proxy/load balancer.",
+                    path);
+            }
             await _next(context);
             return;
         }
 
         // Check if this is a discovery endpoint (allow any origin)
-        if (IsDiscoveryPath(path))
+        if (isDiscoveryPath)
         {
+            _logger.LogInformation("[CORS Diagnostics] Discovery endpoint - allowing origin {Origin}", origin);
             AddCorsHeaders(context, origin);
 
             if (IsPreflightRequest(context))
@@ -60,7 +85,7 @@ public class OAuthCorsMiddleware
         }
 
         // Check if this is an OAuth endpoint
-        if (IsOAuthPath(path))
+        if (isOAuthPath)
         {
             var tenantResolver = context.RequestServices.GetRequiredService<ITenantResolver>();
             var corsService = context.RequestServices.GetRequiredService<IOAuthCorsService>();
@@ -68,19 +93,30 @@ public class OAuthCorsMiddleware
             var tenant = await tenantResolver.ResolveAsync(context);
             if (tenant == null)
             {
-                _logger.LogWarning("CORS request to {Path} without valid tenant", path);
+                _logger.LogWarning("[CORS Diagnostics] CORS request to {Path} without valid tenant - rejecting", path);
                 context.Response.StatusCode = 403;
                 return;
             }
+
+            _logger.LogInformation("[CORS Diagnostics] Checking if origin {Origin} is allowed for tenant {TenantId}", origin, tenant.Id);
+
+            var allowedOrigins = await corsService.GetAllowedOriginsAsync(tenant.Id);
+            _logger.LogInformation("[CORS Diagnostics] Allowed origins for tenant {TenantId}: {AllowedOrigins}",
+                tenant.Id,
+                string.Join(", ", allowedOrigins));
 
             var isAllowed = await corsService.IsOriginAllowedAsync(tenant.Id, origin);
             if (!isAllowed)
             {
-                _logger.LogWarning("CORS origin {Origin} not allowed for tenant {TenantId}", origin, tenant.Id);
+                _logger.LogWarning(
+                    "[CORS Diagnostics] Origin {Origin} NOT ALLOWED for tenant {TenantId}. " +
+                    "Add this origin to the client's CorsOrigins configuration.",
+                    origin, tenant.Id);
                 context.Response.StatusCode = 403;
                 return;
             }
 
+            _logger.LogInformation("[CORS Diagnostics] Origin {Origin} allowed - adding CORS headers", origin);
             AddCorsHeaders(context, origin);
 
             if (IsPreflightRequest(context))

@@ -13,12 +13,20 @@ public class OAuthCorsService : IOAuthCorsService
 
     public async Task<bool> IsOriginAllowedAsync(string tenantId, string origin)
     {
+        // Use the cached CorsOriginsGrain which now includes origins from:
+        // - Explicit CorsOrigins
+        // - RedirectUris
+        // - PostLogoutRedirectUris
         var corsGrain = _clusterClient.GetGrain<ICorsOriginsGrain>($"{tenantId}/cors-origins");
         return await corsGrain.IsOriginAllowedAsync(origin);
     }
 
     public async Task<IReadOnlyList<string>> GetAllowedOriginsAsync(string tenantId)
     {
+        // Use the cached CorsOriginsGrain which now includes origins from:
+        // - Explicit CorsOrigins
+        // - RedirectUris
+        // - PostLogoutRedirectUris
         var corsGrain = _clusterClient.GetGrain<ICorsOriginsGrain>($"{tenantId}/cors-origins");
         return await corsGrain.GetOriginsAsync();
     }

@@ -110,7 +110,7 @@ public class OAuthCorsMiddleware
             {
                 _logger.LogWarning(
                     "[CORS Diagnostics] Origin {Origin} NOT ALLOWED for tenant {TenantId}. " +
-                    "Add this origin to the client's CorsOrigins configuration.",
+                    "Add this origin to a client's CorsOrigins, RedirectUris, or PostLogoutRedirectUris.",
                     origin, tenant.Id);
                 context.Response.StatusCode = 403;
                 return;

@@ -8,6 +8,10 @@ namespace TGHarker.Identity.Grains;
 /// <summary>
 /// Grain that caches allowed CORS origins for a tenant.
 /// This grain does not persist state - it rebuilds from clients on activation.
+/// Origins are extracted from:
+/// - Client CorsOrigins (explicit CORS origins)
+/// - Client RedirectUris (OAuth redirect endpoints)
+/// - Client PostLogoutRedirectUris (post-logout redirect endpoints)
 /// </summary>
 public sealed class CorsOriginsGrain : Grain, ICorsOriginsGrain
 {
@@ -78,11 +82,41 @@ public sealed class CorsOriginsGrain : Grain, ICorsOriginsGrain
             foreach (var client in clients)
             {
                 var state = await client.GetStateAsync();
-                if (state?.CorsOrigins != null)
+                if (state == null)
+                    continue;
+
+                // Add explicit CORS origins
+                if (state.CorsOrigins != null)
                 {
                     foreach (var corsOrigin in state.CorsOrigins)
                     {
                         origins.Add(corsOrigin);
+                    }
+                }
+
+                // Add origins extracted from redirect URIs
+                if (state.RedirectUris != null)
+                {
+                    foreach (var redirectUri in state.RedirectUris)
+                    {
+                        var origin = ExtractOriginFromUrl(redirectUri);
+                        if (origin != null)
+                        {
+                            origins.Add(origin);
+                        }
+                    }
+                }
+
+                // Add origins extracted from post-logout redirect URIs
+                if (state.PostLogoutRedirectUris != null)
+                {
+                    foreach (var postLogoutUri in state.PostLogoutRedirectUris)
+                    {
+                        var origin = ExtractOriginFromUrl(postLogoutUri);
+                        if (origin != null)
+                        {
+                            origins.Add(origin);
+                        }
                     }
                 }
             }
@@ -90,7 +124,7 @@ public sealed class CorsOriginsGrain : Grain, ICorsOriginsGrain
             _origins = origins;
             _initialized = true;
 
-            _logger.LogDebug("Loaded {Count} CORS origins for tenant {TenantId}", origins.Count, tenantId);
+            _logger.LogDebug("Loaded {Count} CORS origins for tenant {TenantId} (from CorsOrigins + RedirectUris + PostLogoutRedirectUris)", origins.Count, tenantId);
         }
         catch (Exception ex)
         {
@@ -104,6 +138,15 @@ public sealed class CorsOriginsGrain : Grain, ICorsOriginsGrain
         var key = this.GetPrimaryKeyString();
         var parts = key.Split('/');
         return parts.Length > 0 ? parts[0] : string.Empty;
+    }
+
+    private static string? ExtractOriginFromUrl(string url)
+    {
+        if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        {
+            return $"{uri.Scheme}://{uri.Host}{(uri.IsDefaultPort ? "" : $":{uri.Port}")}";
+        }
+        return null;
     }
 
     private static string NormalizeOrigin(string origin)

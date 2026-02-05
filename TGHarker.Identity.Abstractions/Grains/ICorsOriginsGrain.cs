@@ -3,6 +3,11 @@ namespace TGHarker.Identity.Abstractions.Grains;
 /// <summary>
 /// Grain that caches allowed CORS origins for a tenant.
 /// Key: {tenantId}/cors-origins (e.g., "acme/cors-origins")
+///
+/// Origins are automatically extracted from all active clients in the tenant:
+/// - Client CorsOrigins (explicit CORS origins)
+/// - Client RedirectUris (OAuth redirect endpoints)
+/// - Client PostLogoutRedirectUris (post-logout redirect endpoints)
 /// </summary>
 public interface ICorsOriginsGrain : IGrainWithStringKey
 {
